@@ -3,10 +3,12 @@
 # cython: embedsignature = True
 # cython: language_level = 3
 
+from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.memory cimport unique_ptr
 from libcpp.vector cimport vector
 from cython.operator cimport dereference as deref
+from libcpp.utility cimport move
 
 cdef extern from "dmlc/io.h" namespace "dmlc":
     cdef cppclass Stream:
@@ -31,36 +33,50 @@ cdef extern from "treelite/tree.h" namespace "treelite":
         Node& operator[](int nid) except +
         void Serialize(Stream* fo) except +
         void Deserialize(Stream* fi) except +
+    cdef cppclass ModelParam:
+        pass
+    cdef cppclass Model:
+        vector[Tree] trees
+        int num_feature
+        int num_output_group
+        bool random_forest_flag
+        ModelParam param
+        Model() except +
+        void Serialize(Stream* fo) except +
+        void Deserialize(Stream* fi) except +
 
-cdef Tree* make_model():
-    cdef Tree* tree = new Tree()
+cdef Model* make_model():
+    cdef Model* model = new Model()
+    cdef Tree tree
     tree.Init()
-    return tree
+    model.trees.push_back(move(tree))
+    return model
 
-cdef string serialize(Tree* tree):
+cdef string serialize(const Model* model):
     cdef string s
     cdef unique_ptr[Stream] strm
     strm.reset(new MemoryStringStream(&s))
-    tree.Serialize(strm.get())
+    model.Serialize(strm.get())
     strm.release()
     return s
 
-cdef Tree* deserialize(string s):
+cdef Model* deserialize(string s):
+    cdef Model* model = new Model()
     cdef unique_ptr[Stream] strm
     strm.reset(new MemoryStringStream(&s))
-    cdef Tree* tree = new Tree()
-    tree.Deserialize(strm.get())
-    return tree
+    model.Deserialize(strm.get())
+    return model
 
 def main():
     model = make_model()
     print('Built a tree stump with leaf output 0.0')
     s = serialize(model)
     print(f'Serialized model bytes ({len(s)} bytes) {s}')
+    del model
+
     model2 = deserialize(s)
     print(f'Deserialized model')
     s2 = serialize(model2)
     assert s == s2
     print('Round-trip conversion preserved all bytes')
-    del model
     del model2
