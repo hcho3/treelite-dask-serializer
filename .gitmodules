@@ -1,0 +1,3 @@
+[submodule "treelite_minimal/3rdparty/dmlc-core"]
+	path = treelite_minimal/3rdparty/dmlc-core
+	url = https://github.com/dmlc/dmlc-core
