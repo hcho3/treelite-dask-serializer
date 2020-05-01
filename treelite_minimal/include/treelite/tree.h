@@ -59,14 +59,20 @@ class Tree {
      * \return get leaf vector of leaf node; useful for multi-class
      * random forest classifier
      */
-    inline const std::vector<tl_float>& leaf_vector() const {
-      return this->tree_->leaf_vector_[this->nid_];
+    inline std::vector<tl_float> leaf_vector() const {
+      const auto& leaf_vector = this->tree_->leaf_vector_;
+      const auto& offset = this->tree_->leaf_vector_offset_;
+      CHECK_LE(this->nid_, offset.size());
+      return std::vector<tl_float>(&leaf_vector[offset[this->nid_]],
+                                   &leaf_vector[offset[this->nid_ + 1]]);
     }
     /*!
      * \return tests whether leaf node has a non-empty leaf vector
      */
     inline bool has_leaf_vector() const {
-      return !(this->tree_->leaf_vector_[this->nid_].empty());
+      const auto& offset = this->tree_->leaf_vector_offset_;
+      CHECK_LE(this->nid_, offset.size());
+      return offset[this->nid_] != offset[this->nid_ + 1];
     }
     /*! \return get threshold of the node */
     inline tl_float threshold() const {
@@ -95,8 +101,12 @@ class Tree {
      * categories in that particular feature.
      * This list is assumed to be in ascending order.
      */
-    inline const std::vector<uint32_t>& left_categories() const {
-      return this->tree_->left_categories_[this->nid_];
+    inline std::vector<uint32_t> left_categories() const {
+      const auto& left_categories = this->tree_->left_categories_;
+      const auto& offset = this->tree_->left_categories_offset_;
+      CHECK_LE(this->nid_, offset.size());
+      return std::vector<uint32_t>(&left_categories[offset[this->nid_]],
+                                   &left_categories[offset[this->nid_ + 1]]);
     }
     /*! \brief get feature split type */
     inline SplitFeatureType split_type() const {
@@ -158,15 +168,24 @@ class Tree {
      */
     inline void set_categorical_split(unsigned split_index, bool default_left,
                                       bool missing_category_to_zero,
-                                 const std::vector<uint32_t>& left_categories) {
+                                      const std::vector<uint32_t>& left_categories) {
       CHECK_LT(split_index, (1U << 31) - 1) << "split_index too big";
+      CHECK_EQ(this->nid_ + 1, this->tree_->left_categories_offset_.size());
+      CHECK_EQ(this->tree_->left_categories_offset_.back(), this->tree_->left_categories_.size());
+
       if (default_left) split_index |= (1U << 31);
       this->sindex_ = split_index;
-      this->tree_->left_categories_[this->nid_] = left_categories;
-      std::sort(this->tree_->left_categories_[this->nid_].begin(),
-                this->tree_->left_categories_[this->nid_].end());
       this->split_type_ = SplitFeatureType::kCategorical;
       this->missing_category_to_zero_ = missing_category_to_zero;
+
+      const size_t sort_begin = this->tree_->left_categories_.size();
+      const size_t sort_end = sort_begin + left_categories.size();
+      this->tree_->left_categories_.insert(this->tree_->left_categories_.end(),
+                                           left_categories.begin(), left_categories.end());
+      CHECK_EQ(this->tree_->left_categories_.size(), sort_end);
+      this->tree_->left_categories_offset_.back() = sort_end;
+      std::sort(this->tree_->left_categories_.begin() + sort_begin,
+                this->tree_->left_categories_.begin() + sort_end);
     }
     /*!
      * \brief set the leaf value of the node
@@ -184,10 +203,16 @@ class Tree {
      * \param leaf_vector leaf vector
      */
     inline void set_leaf_vector(const std::vector<tl_float>& leaf_vector) {
-      this->tree_->leaf_vector_[this->nid_] = leaf_vector;
+      CHECK_EQ(this->nid_ + 1, this->tree_->leaf_vector_offset_.size());
+      CHECK_EQ(this->tree_->leaf_vector_offset_.back(), this->tree_->leaf_vector_offset_.size());
+
       this->cleft_ = -1;
       this->cright_ = -1;
       this->split_type_ = SplitFeatureType::kNone;
+
+      this->tree_->leaf_vector_.insert(this->tree_->leaf_vector_.end(),
+                                       leaf_vector.begin(), leaf_vector.end());
+      this->tree_->leaf_vector_offset_.back() = this->tree_->leaf_vector_.size();
     }
     /*!
      * \brief set the hessian sum of the node
@@ -282,8 +307,10 @@ class Tree {
  private:
   // vector of nodes
   std::vector<Node> nodes_;
-  std::vector<std::vector<tl_float>> leaf_vector_;
-  std::vector<std::vector<uint32_t>> left_categories_;
+  std::vector<tl_float> leaf_vector_;
+  std::vector<size_t> leaf_vector_offset_;
+  std::vector<uint32_t> left_categories_;
+  std::vector<uint32_t> left_categories_offset_;
 
   // allocate a new node
   inline int AllocNode() {
@@ -292,8 +319,8 @@ class Tree {
         << "number of nodes in the tree exceed 2^31";
     CHECK_EQ(nodes_.size(), static_cast<size_t>(nd));
     for (int nid = nd; nid < num_nodes; ++nid) {
-      leaf_vector_.emplace_back();
-      left_categories_.emplace_back();
+      leaf_vector_offset_.push_back(leaf_vector_offset_.back());
+      left_categories_offset_.push_back(left_categories_offset_.back());
       nodes_.emplace_back(this, nid);
     }
     return nd;
@@ -321,8 +348,10 @@ class Tree {
   /*! \brief initialize the model with a single root node */
   inline void Init() {
     num_nodes = 1;
-    leaf_vector_.emplace_back();
-    left_categories_.emplace_back();
+    leaf_vector_.clear();
+    leaf_vector_offset_ = {0, 0};
+    left_categories_.clear();
+    left_categories_offset_ = {0, 0};
     nodes_.emplace_back(this, 0);
     nodes_[0].set_leaf(0.0f);
     nodes_[0].set_parent(-1);
@@ -401,7 +430,7 @@ struct ModelParam : public dmlc::Parameter<ModelParam> {
    * \brief scaling parameter for sigmoid function
    * `sigmoid(x) = 1 / (1 + exp(-alpha * x))`
    *
-   * This parameter is used only when `pred_transform` is set to `'sigmoid'`. 
+   * This parameter is used only when `pred_transform` is set to `'sigmoid'`.
    * It must be strictly positive; if unspecified, it is set to 1.0.
    */
   float sigmoid_alpha;

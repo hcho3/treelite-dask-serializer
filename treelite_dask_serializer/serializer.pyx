@@ -55,7 +55,7 @@ cdef class TreeliteModel:
         if self._model != NULL:
             del self._model
 
-    cdef string serialize(self):
+    cdef string serialize(self) except *:
         cdef string s
         cdef unique_ptr[Stream] strm
         strm.reset(new MemoryStringStream(&s))
