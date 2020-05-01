@@ -45,38 +45,51 @@ cdef extern from "treelite/tree.h" namespace "treelite":
         void Serialize(Stream* fo) except +
         void Deserialize(Stream* fi) except +
 
-cdef Model* make_model():
-    cdef Model* model = new Model()
-    cdef Tree tree
-    tree.Init()
-    model.trees.push_back(move(tree))
-    return model
+cdef class TreeliteModel:
+    cdef Model* _model
 
-cdef string serialize(const Model* model):
-    cdef string s
-    cdef unique_ptr[Stream] strm
-    strm.reset(new MemoryStringStream(&s))
-    model.Serialize(strm.get())
-    strm.release()
-    return s
+    def __cinit__(self):
+        self._model = new Model()
 
-cdef Model* deserialize(string s):
-    cdef Model* model = new Model()
-    cdef unique_ptr[Stream] strm
-    strm.reset(new MemoryStringStream(&s))
-    model.Deserialize(strm.get())
-    return model
+    def __dealloc__(self):
+        if self._model != NULL:
+            del self._model
+
+    cdef string serialize(self):
+        cdef string s
+        cdef unique_ptr[Stream] strm
+        strm.reset(new MemoryStringStream(&s))
+        self._model.Serialize(strm.get())
+        strm.release()
+        return s
+
+    @staticmethod
+    cdef TreeliteModel deserialize(string s):
+        model = TreeliteModel()
+        cdef unique_ptr[Stream] strm
+        strm.reset(new MemoryStringStream(&s))
+        model._model.Deserialize(strm.get())
+        strm.release()
+        return model
+
+    @staticmethod
+    cdef TreeliteModel make_stump():
+        model = TreeliteModel()
+        cdef Tree tree
+        tree.Init()
+        model._model.trees.push_back(move(tree))
+        return model
 
 def main():
-    model = make_model()
+    model = TreeliteModel.make_stump()
     print('Built a tree stump with leaf output 0.0')
-    s = serialize(model)
+    s = model.serialize()
     print(f'Serialized model bytes ({len(s)} bytes) {s}')
     del model
 
-    model2 = deserialize(s)
+    model2 = TreeliteModel.deserialize(s)
     print(f'Deserialized model')
-    s2 = serialize(model2)
-    assert s == s2
+    s2 = model2.serialize()
+    assert s == s2, f'len(s2) = {len(s2)}'
     print('Round-trip conversion preserved all bytes')
     del model2
