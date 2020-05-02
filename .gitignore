@@ -1,0 +1,5 @@
+/build
+/treelite_minimal/build
+/treelite_dask_serializer/__pycache__/
+/treelite_dask_serializer/*.cpp
+/treelite_dask_serializer/*.so
