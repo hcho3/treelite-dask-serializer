@@ -170,22 +170,28 @@ class Tree {
                                       bool missing_category_to_zero,
                                       const std::vector<uint32_t>& left_categories) {
       CHECK_LT(split_index, (1U << 31) - 1) << "split_index too big";
-      CHECK_EQ(this->nid_ + 1, this->tree_->left_categories_offset_.size());
-      CHECK_EQ(this->tree_->left_categories_offset_.back(), this->tree_->left_categories_.size());
+
+      auto& t_left_categories = this->tree_->left_categories_;
+      auto& t_left_categories_offset = this->tree_->left_categories_offset_;
+      const size_t end_oft = t_left_categories_offset.back();
+      const size_t new_end_oft = end_oft + left_categories.size();
+      CHECK_EQ(end_oft, t_left_categories.size());
+      CHECK(std::all_of(t_left_categories_offset.begin() + (this->nid_ + 1),
+                        t_left_categories_offset.end(),
+                        [end_oft](size_t x) { return (x == end_oft); }));
+        // Hopefully we won't have to move any element as we add left_categories for node nid
+      t_left_categories.insert(t_left_categories.end(), left_categories.begin(),
+                               left_categories.end());
+      CHECK_EQ(new_end_oft, t_left_categories.size());
+      std::for_each(t_left_categories_offset.begin() + (this->nid_ + 1),
+                    t_left_categories_offset.end(),
+                    [new_end_oft](size_t& x) { x = new_end_oft; });
+      std::sort(t_left_categories.begin() + end_oft, t_left_categories.end());
 
       if (default_left) split_index |= (1U << 31);
       this->sindex_ = split_index;
       this->split_type_ = SplitFeatureType::kCategorical;
       this->missing_category_to_zero_ = missing_category_to_zero;
-
-      const size_t sort_begin = this->tree_->left_categories_.size();
-      const size_t sort_end = sort_begin + left_categories.size();
-      this->tree_->left_categories_.insert(this->tree_->left_categories_.end(),
-                                           left_categories.begin(), left_categories.end());
-      CHECK_EQ(this->tree_->left_categories_.size(), sort_end);
-      this->tree_->left_categories_offset_.back() = sort_end;
-      std::sort(this->tree_->left_categories_.begin() + sort_begin,
-                this->tree_->left_categories_.begin() + sort_end);
     }
     /*!
      * \brief set the leaf value of the node
@@ -203,16 +209,24 @@ class Tree {
      * \param leaf_vector leaf vector
      */
     inline void set_leaf_vector(const std::vector<tl_float>& leaf_vector) {
-      CHECK_EQ(this->nid_ + 1, this->tree_->leaf_vector_offset_.size());
-      CHECK_EQ(this->tree_->leaf_vector_offset_.back(), this->tree_->leaf_vector_offset_.size());
+			auto& t_leaf_vector = this->tree_->leaf_vector_;
+			auto& t_leaf_vector_offset = this->tree_->leaf_vector_offset_;
+      const size_t end_oft = t_leaf_vector_offset.back();
+      const size_t new_end_oft = end_oft + leaf_vector.size();
+      CHECK_EQ(end_oft, t_leaf_vector.size());
+      CHECK(std::all_of(t_leaf_vector_offset.begin() + (this->nid_ + 1),
+                        t_leaf_vector_offset.end(),
+                        [end_oft](size_t x) { return (x == end_oft); }));
+        // Hopefully we won't have to move any element as we add leaf vector elements for node nid
+      t_leaf_vector.insert(t_leaf_vector.end(), leaf_vector.begin(), leaf_vector.end());
+      CHECK_EQ(new_end_oft, t_leaf_vector.size());
+      std::for_each(t_leaf_vector_offset.begin() + (this->nid_ + 1),
+                    t_leaf_vector_offset.end(),
+                    [new_end_oft](size_t& x) { x = new_end_oft; });
 
       this->cleft_ = -1;
       this->cright_ = -1;
       this->split_type_ = SplitFeatureType::kNone;
-
-      this->tree_->leaf_vector_.insert(this->tree_->leaf_vector_.end(),
-                                       leaf_vector.begin(), leaf_vector.end());
-      this->tree_->leaf_vector_offset_.back() = this->tree_->leaf_vector_.size();
     }
     /*!
      * \brief set the hessian sum of the node
@@ -310,7 +324,7 @@ class Tree {
   std::vector<tl_float> leaf_vector_;
   std::vector<size_t> leaf_vector_offset_;
   std::vector<uint32_t> left_categories_;
-  std::vector<uint32_t> left_categories_offset_;
+  std::vector<size_t> left_categories_offset_;
 
   // allocate a new node
   inline int AllocNode() {
