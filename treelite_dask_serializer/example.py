@@ -1,19 +1,47 @@
 from .serializer import serialize, deserialize
 from .builder import Node, Tree, ModelBuilder
+from .treelite_model import get_frames
+import numpy as np
 
 def print_bytes(s):
     for i, e in enumerate(s):
+        if (i + 1) % 48 == 1:
+            print('    ', end='')
         print(f'{e:02X}', end='')
         if (i + 1) % 48 == 0:
             print()
         elif (i + 1) % 16 == 0:
             print('  ', end='')
-        elif (i + 1) % 2 == 0:
+        else:
             print(' ', end='')
-    if len(s) % 16 != 0:
+    if len(s) % 48 != 0:
+        print()
+
+def print_byte_ndarray(x):
+    for i, e in enumerate(x):
+        if (i + 1) % 48 == 1:
+            print('    ', end='')
+        print(f'{e:02X}', end='')
+        if (i + 1) % 48 == 0:
+            print()
+        elif (i + 1) % 16 == 0:
+            print('  ', end='')
+        else:
+            print(' ', end='')
+    if len(x) % 48 != 0:
         print()
 
 def test_round_trip(model):
+    frames = [np.asarray(x) for x in get_frames(model)]
+    print('Python buffer frames:')
+    for frame_id, frame in enumerate(frames):
+        print(f'  * Frame {frame_id}: dtype {frame.dtype}, length {len(frame)}')
+        if frame.dtype == np.uint8:
+            print_byte_ndarray(frame)
+        else:
+            print(f'    {repr(frame)}')
+    print()
+
     s = serialize(model)
     print(f'Serialized model bytes ({len(s)} bytes):')
     print_bytes(s)

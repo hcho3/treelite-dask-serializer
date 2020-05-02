@@ -5,8 +5,10 @@
 * Minimal port of Treelite: only model builder and definition are included here.
 * Cython, to seamlessly integrate C++ code with Python
 
-## TODOs
+## WIP
 * Implement Python Buffer protocol, so that tree object can be serialized zero-copy. (Right now one copy is made.)
+
+## TODOs
 * Integrate with Dask via a custom serializer hook.
 
 ## How to build
@@ -23,3 +25,4 @@ python setup.py build_ext --inplace
 # Run example
 python -c 'from treelite_dask_serializer.example import main; main()'
 ```
+See `output.txt` for an example output.
