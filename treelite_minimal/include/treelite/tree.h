@@ -97,8 +97,6 @@ class Tree {
     };
     /*! \brief pointer to left and right children */
     int32_t cleft_, cright_;
-    /*! \brief feature split type */
-    SplitFeatureType split_type_;
     /*!
      * \brief feature index used for the split
      * highest bit indicates default direction for missing values
@@ -106,6 +104,24 @@ class Tree {
     uint32_t sindex_;
     /*! \brief storage for leaf value or decision threshold */
     Info info_;
+    /*!
+     * \brief number of data points whose traversal paths include this node.
+     *        LightGBM models natively store this statistics.
+     */
+    uint64_t data_count_;
+    /*!
+     * \brief sum of hessian values for all data points whose traversal paths
+     *        include this node. This value is generally correlated positively
+     *        with the data count. XGBoost models natively store this
+     *        statistics.
+     */
+    double sum_hess_;
+    /*!
+     * \brief change in loss that is attributed to a particular split
+     */
+    double gain_;
+    /*! \brief feature split type */
+    SplitFeatureType split_type_;
     /*!
      * \brief operator to use for expression of form [fval] OP [threshold].
      * If the expression evaluates to true, take the left child;
@@ -117,32 +133,19 @@ class Tree {
      * When this flag is set, it overrides the behavior of default_left().
      */
     bool missing_category_to_zero_;
-    /*!
-     * \brief number of data points whose traversal paths include this node.
-     *        LightGBM models natively store this statistics.
-     */
+    /*! \brief whether data_count_ field is present */
     bool data_count_present_;
-    uint64_t data_count_;
-    /*!
-     * \brief sum of hessian values for all data points whose traversal paths
-     *        include this node. This value is generally correlated positively
-     *        with the data count. XGBoost models natively store this
-     *        statistics.
-     */
+    /*! \brief whether sum_hess_ field is present */
     bool sum_hess_present_;
-    double sum_hess_;
-    /*!
-     * \brief change in loss that is attributed to a particular split
-     */
+    /*! \brief whether gain_present_ field is present */
     bool gain_present_;
-    double gain_;
   };
 
   static_assert(std::is_pod<Node>::value, "Node must be a POD type");
 
  public:
   inline std::vector<PyBufferInterface1D> GetPyBuffer() {
-    return {GetPyBufferFromVector(nodes_, "T{=l=l=bxxx=L=f=b=?=?x=Q=?xxxxxxx=d=?xxxxxxx=d}"),
+    return {GetPyBufferFromVector(nodes_, "T{=l=l=L=f=Q=d=d=b=b=?=?=?=?xx}"),
       GetPyBufferFromVector(leaf_vector_),
       GetPyBufferFromVector(leaf_vector_offset_), GetPyBufferFromVector(left_categories_),
       GetPyBufferFromVector(left_categories_offset_)};
