@@ -22,9 +22,9 @@ cdef extern from "treelite/tree.h" namespace "treelite":
         size_t itemsize
         size_t nitem
     cdef cppclass PyBufferInterfaceTreeliteModel:
-        vector[PyBufferInterface1D] frames
+        vector[PyBufferInterface1D] header_frames
+        vector[PyBufferInterface1D] tree_frames
         size_t ntree
-        size_t nframe_per_tree
     cdef cppclass Tree:
         void Init() except +
         void Serialize(Stream* fo) except +

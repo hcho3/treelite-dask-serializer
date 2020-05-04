@@ -65,8 +65,14 @@ cdef TreeliteModel make_stump():
 cdef list _get_frames(TreeliteModel model):
     frames = []
     cdef PyBufferInterfaceTreeliteModel interface = model._model.get().GetPyBuffer()
-    cdef vector[PyBufferInterface1D].iterator it = interface.frames.begin()
-    while it != interface.frames.end():
+    cdef vector[PyBufferInterface1D].iterator it = interface.header_frames.begin()
+    while it != interface.header_frames.end():
+        v = deref(it)
+        w = MakePyBuffer1DWrapper(v)
+        frames.append(memoryview(w))
+        inc(it)
+    it = interface.tree_frames.begin()
+    while it != interface.tree_frames.end():
         v = deref(it)
         w = MakePyBuffer1DWrapper(v)
         frames.append(memoryview(w))

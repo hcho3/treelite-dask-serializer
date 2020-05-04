@@ -27,58 +27,10 @@ struct PyBufferInterface1D {
 };
 
 struct PyBufferInterfaceTreeliteModel {
-  std::vector<PyBufferInterface1D> frames;
+  std::vector<PyBufferInterface1D> header_frames;
+  std::vector<PyBufferInterface1D> tree_frames;
   size_t ntree;
-  size_t nframe_per_tree;
 };
-
-inline PyBufferInterface1D GetPyBufferFromVector(void* data, const char* format,
-                                       size_t itemsize, size_t nitem) {
-  return PyBufferInterface1D{data, const_cast<char*>(format), itemsize, nitem};
-}
-
-// Infer format string from data type; use uint8_t bytes for composite types
-template <typename T>
-inline PyBufferInterface1D GetPyBufferFromVector(std::vector<T>& vec) {
-  static_assert(sizeof(uint8_t) == 1, "Assumed sizeof(uint8_t) == 1");
-  if (!std::is_arithmetic<T>::value) {
-    return GetPyBufferFromVector(static_cast<void*>(vec.data()), "=B",
-                                 sizeof(uint8_t), vec.size() * sizeof(T));
-  }
-  const char* format = nullptr;
-  switch (sizeof(T)) {
-   case 1:
-     format = (std::is_unsigned<T>::value ? "=B" : "=b");
-     break;
-   case 2:
-     format = (std::is_unsigned<T>::value ? "=H" : "=h");
-   case 4:
-     if (std::is_integral<T>::value) {
-       format = (std::is_unsigned<T>::value ? "=L" : "=l");
-     } else {
-       CHECK(std::is_floating_point<T>::value);
-       format = "=f";
-     }
-     break;
-   case 8:
-     if (std::is_integral<T>::value) {
-       format = (std::is_unsigned<T>::value ? "=Q" : "=q");
-     } else {
-       CHECK(std::is_floating_point<T>::value);
-       format = "=d";
-     }
-     break;
-   default:
-     LOG(FATAL) << "Type not supported";
-  }
-  return GetPyBufferFromVector(static_cast<void*>(vec.data()), format, sizeof(T), vec.size());
-}
-
-// Custom format string specified
-template <typename T>
-inline PyBufferInterface1D GetPyBufferFromVector(std::vector<T>& vec, const char* format) {
-  return GetPyBufferFromVector(static_cast<void*>(vec.data()), format, sizeof(T), vec.size());
-}
 
 /*! \brief in-memory representation of a decision tree */
 class Tree {
@@ -143,13 +95,7 @@ class Tree {
 
   static_assert(std::is_pod<Node>::value, "Node must be a POD type");
 
- public:
-  inline std::vector<PyBufferInterface1D> GetPyBuffer() {
-    return {GetPyBufferFromVector(nodes_, "T{=l=l=L=f=Q=d=d=b=b=?=?=?=?xx}"),
-      GetPyBufferFromVector(leaf_vector_),
-      GetPyBufferFromVector(leaf_vector_offset_), GetPyBufferFromVector(left_categories_),
-      GetPyBufferFromVector(left_categories_offset_)};
-  }
+  inline std::vector<PyBufferInterface1D> GetPyBuffer();
 
  private:
   // vector of nodes
@@ -465,24 +411,115 @@ struct Model {
   void Serialize(dmlc::Stream* fo) const;
   void Deserialize(dmlc::Stream* fi);
 
-  inline PyBufferInterfaceTreeliteModel GetPyBuffer() {
-    PyBufferInterfaceTreeliteModel buffer;
-    buffer.nframe_per_tree = 0;
-    for (auto& tree : trees) {
-      std::vector<PyBufferInterface1D> frames = tree.GetPyBuffer();
-      buffer.frames.insert(buffer.frames.end(), frames.begin(), frames.end());
-      if (buffer.nframe_per_tree > 0) {
-        CHECK_EQ(buffer.nframe_per_tree, frames.size());
-      } else {
-        buffer.nframe_per_tree = frames.size();
-      }
-    }
-    buffer.ntree = trees.size();
-    return buffer;
-  }
+  inline std::vector<PyBufferInterface1D> GetPyBufferFromHeader();
+  inline PyBufferInterfaceTreeliteModel GetPyBuffer();
 };
 
 /** Implementations **/
+
+inline PyBufferInterface1D GetPyBufferFromVector(void* data, const char* format,
+                                                 size_t itemsize, size_t nitem) {
+  return PyBufferInterface1D{data, const_cast<char*>(format), itemsize, nitem};
+}
+
+// Infer format string from data type; use uint8_t bytes for composite types
+template <typename T>
+inline const char* InferFormatString(T t) {
+  switch (sizeof(T)) {
+   case 1:
+     return (std::is_unsigned<T>::value ? "=B" : "=b");
+   case 2:
+     return (std::is_unsigned<T>::value ? "=H" : "=h");
+   case 4:
+     if (std::is_integral<T>::value) {
+       return (std::is_unsigned<T>::value ? "=L" : "=l");
+     } else {
+       CHECK(std::is_floating_point<T>::value);
+       return "=f";
+     }
+   case 8:
+     if (std::is_integral<T>::value) {
+       return (std::is_unsigned<T>::value ? "=Q" : "=q");
+     } else {
+       CHECK(std::is_floating_point<T>::value);
+       return "=d";
+     }
+   default:
+     LOG(FATAL) << "Type not supported";
+  }
+  return nullptr;
+}
+
+template <typename T>
+inline PyBufferInterface1D GetPyBufferFromVector(std::vector<T>& vec, const char* format) {
+  return GetPyBufferFromVector(static_cast<void*>(vec.data()), format, sizeof(T), vec.size());
+}
+
+// Infer format string from data type; use uint8_t bytes for composite types
+template <typename T>
+inline PyBufferInterface1D GetPyBufferFromVector(std::vector<T>& vec) {
+  static_assert(sizeof(uint8_t) == 1, "Assumed sizeof(uint8_t) == 1");
+  if (!std::is_arithmetic<T>::value) {
+    return GetPyBufferFromVector(static_cast<void*>(vec.data()), "=B",
+                                 sizeof(uint8_t), vec.size() * sizeof(T));
+  }
+  return GetPyBufferFromVector(vec, InferFormatString(vec[0]));
+}
+
+inline PyBufferInterface1D GetPyBufferFromScalar(void* data, const char* format, size_t itemsize) {
+  return GetPyBufferFromVector(data, format, itemsize, 1);
+}
+
+template <typename T>
+inline PyBufferInterface1D GetPyBufferFromScalar(T& scalar, const char* format) {
+  return GetPyBufferFromScalar(static_cast<void*>(&scalar), format, sizeof(T));
+}
+
+// Infer format string from data type; use uint8_t bytes for composite types
+template <typename T>
+inline PyBufferInterface1D GetPyBufferFromScalar(T& scalar) {
+  if (!std::is_arithmetic<T>::value) {
+    return GetPyBufferFromVector(static_cast<void*>(&scalar), "=B", sizeof(uint8_t), sizeof(T));
+  }
+  return GetPyBufferFromScalar(scalar, InferFormatString(scalar));
+}
+
+inline std::vector<PyBufferInterface1D>
+Tree::GetPyBuffer() {
+  return {
+    GetPyBufferFromVector(nodes_, "T{=l=l=L=f=Q=d=d=b=b=?=?=?=?xx}"),
+    GetPyBufferFromVector(leaf_vector_),
+    GetPyBufferFromVector(leaf_vector_offset_),
+    GetPyBufferFromVector(left_categories_),
+    GetPyBufferFromVector(left_categories_offset_)
+  };
+}
+
+inline std::vector<PyBufferInterface1D>
+Model::GetPyBufferFromHeader() {
+  return {
+    GetPyBufferFromScalar(num_feature),
+    GetPyBufferFromScalar(num_output_group),
+    GetPyBufferFromScalar(random_forest_flag),
+    GetPyBufferFromScalar(param)
+  };
+}
+
+inline PyBufferInterfaceTreeliteModel
+Model::GetPyBuffer() {
+  PyBufferInterfaceTreeliteModel buffer;
+  /* Header */
+  buffer.header_frames = GetPyBufferFromHeader();
+
+  /* Body */
+  for (auto& tree : trees) {
+    std::vector<PyBufferInterface1D> frames = tree.GetPyBuffer();
+    buffer.tree_frames.insert(buffer.tree_frames.end(), frames.begin(), frames.end());
+  }
+  buffer.ntree = trees.size();
+  return buffer;
+}
+
 inline std::vector<unsigned>
 Tree::GetCategoricalFeatures() const {
   std::unordered_map<unsigned, bool> tmp;
