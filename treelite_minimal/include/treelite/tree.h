@@ -88,20 +88,15 @@ class Tree {
       tl_float leaf_value;  // for leaf nodes
       tl_float threshold;   // for non-leaf nodes
     };
-    /*!
-     * \brief pointer to parent
-     * highest bit is used to indicate whether it's a left child or not
-     */
-    int parent_;
     /*! \brief pointer to left and right children */
-    int cleft_, cright_;
+    int32_t cleft_, cright_;
     /*! \brief feature split type */
     SplitFeatureType split_type_;
     /*!
      * \brief feature index used for the split
      * highest bit indicates default direction for missing values
      */
-    unsigned sindex_;
+    uint32_t sindex_;
     /*! \brief storage for leaf value or decision threshold */
     Info info_;
     /*!
@@ -120,7 +115,7 @@ class Tree {
      *        LightGBM models natively store this statistics.
      */
     bool data_count_present_;
-    size_t data_count_;
+    uint64_t data_count_;
     /*!
      * \brief sum of hessian values for all data points whose traversal paths
      *        include this node. This value is generally correlated positively
@@ -182,7 +177,6 @@ class Tree {
     nodes_.emplace_back();
     nodes_[0].Init();
     SetLeaf(0, 0.0f);
-    SetParent(0, -1);
   }
   /*!
    * \brief add child nodes to node
@@ -193,8 +187,6 @@ class Tree {
     const int cright = this->AllocNode();
     nodes_[nid].cleft_ = cleft;
     nodes_[nid].cright_ = cright;
-    SetParent(cleft, nid, true);
-    SetParent(cright, nid, false);
   }
 
   /*!
@@ -223,7 +215,7 @@ class Tree {
    * \brief feature index of the node's split condition
    * \param nid ID of node being queried
    */
-  inline unsigned SplitIndex(int nid) const;
+  inline uint32_t SplitIndex(int nid) const;
   /*!
    * \brief whether to use the left child node, when the feature in the split condition is missing
    * \param nid ID of node being queried
@@ -255,21 +247,6 @@ class Tree {
    */
   inline tl_float Threshold(int nid) const;
   /*!
-   * \brief get parent of the node 
-   * \param nid ID of node being queried
-   */
-  inline int Parent(int nid) const;
-  /*!
-   * \brief whether the node is left child 
-   * \param nid ID of node being queried
-   */
-  inline bool IsLeftChild(int nid) const;
-  /*!
-   * \brief whether the node is root 
-   * \param nid ID of node being queried
-   */
-  inline bool IsRoot(int nid) const;
-  /*!
    * \brief get comparison operator 
    * \param nid ID of node being queried
    */
@@ -296,7 +273,7 @@ class Tree {
    * \brief get data count 
    * \param nid ID of node being queried
    */
-  inline size_t DataCount(int nid) const;
+  inline uint64_t DataCount(int nid) const;
   /*!
    * \brief test whether this node has hessian sum 
    * \param nid ID of node being queried
@@ -370,20 +347,13 @@ class Tree {
    * \param nid ID of node being updated
    * \param data_count data count
    */
-  inline void SetDataCount(int nid, size_t data_count);
+  inline void SetDataCount(int nid, uint64_t data_count);
   /*!
    * \brief set the gain value of the node
    * \param nid ID of node being updated
    * \param gain gain value
    */
   inline void SetGain(int nid, double gain);
-  /*!
-   * \brief set parent of the node
-   * \param nid ID of node being updated
-   * \param pidx node id of the parent
-   * \param is_left_child whether the node is left child or not
-   */
-  inline void SetParent(int nid, int pidx, bool is_left_child = true);
 
   void Serialize(dmlc::Stream* fo) const;
   void Deserialize(dmlc::Stream* fi);
@@ -509,7 +479,7 @@ Tree::GetCategoricalFeatures() const {
     const SplitFeatureType type = SplitType(nid);
     if (type != SplitFeatureType::kNone) {
       const bool flag = (type == SplitFeatureType::kCategorical);
-      const unsigned split_index = SplitIndex(nid);
+      const uint32_t split_index = SplitIndex(nid);
       if (tmp.count(split_index) == 0) {
         tmp[split_index] = flag;
       } else {
@@ -543,7 +513,7 @@ Tree::DefaultChild(int nid) const {
   return DefaultLeft(nid) ? LeftChild(nid) : RightChild(nid);
 }
 
-inline unsigned
+inline uint32_t
 Tree::SplitIndex(int nid) const {
   return (nodes_[nid].sindex_ & ((1U << 31) - 1U));
 }
@@ -581,21 +551,6 @@ Tree::Threshold(int nid) const {
   return (nodes_[nid].info_).threshold;
 }
 
-inline int
-Tree::Parent(int nid) const {
-  return (nodes_[nid].parent_ & ((1U << 31) - 1));
-}
-
-inline bool
-Tree::IsLeftChild(int nid) const {
-  return (nodes_[nid].parent_ & (1U << 31)) != 0;
-}
-
-inline bool
-Tree::IsRoot(int nid) const {
-  return nodes_[nid].parent_ == -1;
-}
-
 inline Operator
 Tree::ComparisonOp(int nid) const {
   return nodes_[nid].cmp_;
@@ -618,7 +573,7 @@ Tree::HasDataCount(int nid) const {
   return nodes_[nid].data_count_present_;
 }
 
-inline size_t
+inline uint64_t
 Tree::DataCount(int nid) const {
   return nodes_[nid].data_count_;
 }
@@ -721,7 +676,7 @@ Tree::SetSumHess(int nid, double sum_hess) {
 }
 
 inline void
-Tree::SetDataCount(int nid, size_t data_count) {
+Tree::SetDataCount(int nid, uint64_t data_count) {
   Node& node = nodes_[nid];
   node.data_count_ = data_count;
   node.data_count_present_ = true;
@@ -732,12 +687,6 @@ Tree::SetGain(int nid, double gain) {
   Node& node = nodes_[nid];
   node.gain_ = gain;
   node.gain_present_ = true;
-}
-
-inline void
-Tree::SetParent(int nid, int pidx, bool is_left_child) {
-  if (is_left_child) pidx |= (1U << 31);
-  nodes_[nid].parent_ = pidx;
 }
 
 }  // namespace treelite
