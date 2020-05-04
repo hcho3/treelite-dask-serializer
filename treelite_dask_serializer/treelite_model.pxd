@@ -12,7 +12,6 @@ from .dmlc cimport Stream
 
 cdef extern from "treelite/tree.h" namespace "treelite::Tree":
     cdef cppclass Node:
-        Node(Tree* tree, int nid) except +
         void Serialize(Stream* fo) except +
         void Deserialize(Stream* fi) except +
 

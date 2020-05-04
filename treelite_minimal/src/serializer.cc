@@ -39,11 +39,8 @@ void Tree::Deserialize(dmlc::Stream* fi) {
   uint64_t sz = 0;
   fi->Read(&sz);
   nodes_.clear();
-  nodes_.resize(sz, Node(this, -1));
+  nodes_.resize(sz);
   fi->Read(nodes_.data(), sz * sizeof(Node));
-  for (uint64_t i = 0; i < sz; ++i) {
-    nodes_[i].nid_ = i;
-  }
 
   // Sanity check
   CHECK_EQ(nodes_.size(), num_nodes);
