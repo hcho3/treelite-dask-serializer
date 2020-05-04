@@ -101,23 +101,23 @@ def tree_stump_categorical_split():
 def tree_depth2():
     builder = ModelBuilder(num_feature=2)
 
-    tree = Tree()
-    tree[0].set_numerical_test_node(feature_id=0, opname='<', threshold=0, default_left=True,
-            left_child_key=1, right_child_key=2)
-    tree[1].set_categorical_test_node(feature_id=0, left_categories=[0, 1], default_left=True,
-            left_child_key=3, right_child_key=4)
-    tree[2].set_categorical_test_node(feature_id=1, left_categories=[0], default_left=True,
-            left_child_key=5, right_child_key=6)
-    tree[0].set_root()
-    tree[3].set_leaf_node(-2)
-    tree[4].set_leaf_node(1)
-    tree[5].set_leaf_node(-1)
-    tree[6].set_leaf_node(2)
-
-    builder.append(tree)
+    for _ in range(2):
+        tree = Tree()
+        tree[0].set_numerical_test_node(feature_id=0, opname='<', threshold=0, default_left=True,
+                left_child_key=1, right_child_key=2)
+        tree[1].set_categorical_test_node(feature_id=0, left_categories=[0, 1], default_left=True,
+                left_child_key=3, right_child_key=4)
+        tree[2].set_categorical_test_node(feature_id=1, left_categories=[0], default_left=True,
+                left_child_key=5, right_child_key=6)
+        tree[0].set_root()
+        tree[3].set_leaf_node(-2)
+        tree[4].set_leaf_node(1)
+        tree[5].set_leaf_node(-1)
+        tree[6].set_leaf_node(2)
+        builder.append(tree)
 
     model = builder.commit()
-    print('Built a tree with depth 2, mix of categorical and numerical splits')
+    print('Built 2 trees with depth 2, mix of categorical and numerical splits')
     test_round_trip(model)
 
 def main():
