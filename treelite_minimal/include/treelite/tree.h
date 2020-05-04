@@ -37,6 +37,7 @@ inline PyBufferInterface1D GetPyBufferFromVector(void* data, const char* format,
   return PyBufferInterface1D{data, const_cast<char*>(format), itemsize, nitem};
 }
 
+// Infer format string from data type; use uint8_t bytes for composite types
 template <typename T>
 inline PyBufferInterface1D GetPyBufferFromVector(std::vector<T>& vec) {
   static_assert(sizeof(uint8_t) == 1, "Assumed sizeof(uint8_t) == 1");
@@ -70,6 +71,12 @@ inline PyBufferInterface1D GetPyBufferFromVector(std::vector<T>& vec) {
    default:
      LOG(FATAL) << "Type not supported";
   }
+  return GetPyBufferFromVector(static_cast<void*>(vec.data()), format, sizeof(T), vec.size());
+}
+
+// Custom format string specified
+template <typename T>
+inline PyBufferInterface1D GetPyBufferFromVector(std::vector<T>& vec, const char* format) {
   return GetPyBufferFromVector(static_cast<void*>(vec.data()), format, sizeof(T), vec.size());
 }
 
@@ -135,7 +142,8 @@ class Tree {
 
  public:
   inline std::vector<PyBufferInterface1D> GetPyBuffer() {
-    return {GetPyBufferFromVector(nodes_), GetPyBufferFromVector(leaf_vector_),
+    return {GetPyBufferFromVector(nodes_, "T{=l=l=bxxx=L=f=b=?=?x=Q=?xxxxxxx=d=?xxxxxxx=d}"),
+      GetPyBufferFromVector(leaf_vector_),
       GetPyBufferFromVector(leaf_vector_offset_), GetPyBufferFromVector(left_categories_),
       GetPyBufferFromVector(left_categories_offset_)};
   }
