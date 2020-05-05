@@ -21,11 +21,12 @@ enum class SplitFeatureType : int8_t {
 };
 /*! \brief comparison operators */
 enum class Operator : int8_t {
+  kNone,
   kEQ,  /*!< operator == */
   kLT,  /*!< operator <  */
   kLE,  /*!< operator <= */
   kGT,  /*!< operator >  */
-  kGE   /*!< operator >= */
+  kGE,  /*!< operator >= */
 };
 /*! \brief conversion table from string to operator, defined in optable.cc */
 extern const std::unordered_map<std::string, Operator> optable;

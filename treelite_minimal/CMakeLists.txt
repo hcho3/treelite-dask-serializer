@@ -15,22 +15,26 @@ endif()
 
 add_subdirectory(3rdparty/dmlc-core)
 
-file(GLOB_RECURSE SOURCES
-  src/*.cc
-  src/*.h
-  include/*.h
-)
+set(SOURCES src/builder.cc src/model.cc src/optable.cc src/serializer.cc
+            include/treelite/base.h include/treelite/frontend.h include/treelite/tree.h)
 
 add_library(treelite STATIC ${SOURCES})
 
-set_target_properties(treelite
+target_include_directories(treelite PUBLIC include PRIVATE 3rdparty/dmlc-core/include)
+target_link_libraries(treelite PUBLIC dmlc)
+
+add_executable(tester src/tester.cc)
+target_include_directories(tester PUBLIC include PRIVATE 3rdparty/dmlc-core/include)
+target_link_libraries(tester PRIVATE treelite)
+
+set_target_properties(treelite tester
   PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CXX_STANDARD 11
   CXX_STANDARD_REQUIRED ON)
 
-target_include_directories(treelite PUBLIC include PRIVATE 3rdparty/dmlc-core/include)
-target_link_libraries(treelite PUBLIC dmlc)
+set_property(TARGET tester APPEND_STRING PROPERTY COMPILE_FLAGS -fsanitize=address)
+set_property(TARGET tester APPEND_STRING PROPERTY LINK_FLAGS -fsanitize=address)
 
 set_default_configuration_release()
 msvc_use_static_runtime()

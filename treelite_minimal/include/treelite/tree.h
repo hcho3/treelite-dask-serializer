@@ -32,15 +32,132 @@ struct PyBufferInterfaceTreeliteModel {
   size_t ntree;
 };
 
+template <typename T>
+class ContiguousArray {
+ public:
+  ContiguousArray()
+    : buf_(nullptr), size_(0), capacity_(0) {}
+  ContiguousArray(void* prealloc_buf, size_t size)
+    : buf_(static_cast<T*>(prealloc_buf)), size_(size) {}
+  ~ContiguousArray() {
+    if (buf_) {
+      std::free(buf_);
+    }
+  }
+  ContiguousArray(const ContiguousArray&) = delete;
+  ContiguousArray& operator=(const ContiguousArray&) = delete;
+  ContiguousArray(ContiguousArray&& other)
+      : buf_(other.buf_), size_(other.size_), capacity_(other.capacity_) {
+    other.buf_ = nullptr;
+    other.size_ = other.capacity_ = 0;
+  }
+  ContiguousArray& operator=(ContiguousArray&& other) {
+    buf_ = other.buf_;
+    size_ = other.size_;
+    capacity_ = other.capacity_;
+    other.buf_ = nullptr;
+    other.size_ = other.capacity_ = 0;
+  }
+  inline T* Data() {
+    return buf_;
+  }
+  inline const T* Data() const {
+    return buf_;
+  }
+  inline T* End() { 
+    return &buf_[Size()];
+  }
+  inline const T* End() const {
+    return &buf_[Size()];
+  }
+  inline T& Back() {
+    return buf_[Size() - 1];
+  }
+  inline const T& Back() const {
+    return buf_[Size() - 1];
+  }
+  inline size_t Size() const {
+    return size_;
+  }
+  inline void Reserve(size_t newsize) {
+    T* newbuf = static_cast<T*>(std::realloc(static_cast<void*>(buf_), sizeof(T) * newsize));
+    CHECK(newbuf);
+    buf_ = newbuf;
+    capacity_ = newsize;
+  }
+  inline void Resize(size_t newsize) {
+    if (newsize > capacity_) {
+      size_t newcapacity = capacity_;
+      if (newcapacity == 0) {
+        newcapacity = 1;
+      }
+      while (newcapacity <= newsize) {
+        newcapacity *= 2;
+      }
+      Reserve(newcapacity);
+    }
+    size_ = newsize;
+  }
+  inline void Resize(size_t newsize, T t) {
+    size_t oldsize = Size();
+    Resize(newsize);
+    for (size_t i = oldsize; i < newsize; ++i) {
+      buf_[i] = t;
+    }
+  }
+  inline void Clear() {
+    Resize(0);
+  }
+  inline void PushBack(T t) {
+    if (size_ == capacity_) {
+      Reserve(capacity_ * 2);
+    }
+    buf_[size_++] = t;
+  }
+  inline void Extend(const std::vector<T>& other) {
+    size_t newsize = size_ + other.size();
+    if (newsize > capacity_) {
+      size_t newcapacity = capacity_;
+      if (newcapacity == 0) {
+        newcapacity = 1;
+      }
+      while (newcapacity <= newsize) {
+        newcapacity *= 2;
+      }
+      Reserve(newcapacity);
+    }
+    std::memcpy(&buf_[size_], static_cast<const void*>(other.data()), sizeof(T) * other.size());
+    size_ = newsize;
+  }
+  inline T& operator[](size_t idx) {
+    return buf_[idx];
+  } 
+  inline const T& operator[](size_t idx) const {
+    return buf_[idx];
+  } 
+  static_assert(std::is_pod<T>::value, "T must be POD");
+ private:
+  T* buf_;
+  size_t size_;
+  size_t capacity_;
+};
+
 /*! \brief in-memory representation of a decision tree */
 class Tree {
  public:
   /*! \brief tree node */
   struct Node {
     void Init() {
+      cleft_ = cright_ = -1;
       sindex_ = 0;
+      info_.leaf_value = 0.0f;
+      info_.threshold = 0.0f;
+      data_count_ = 0;
+      sum_hess_ = gain_ = 0.0;
       missing_category_to_zero_ = false;
       data_count_present_ = sum_hess_present_ = gain_present_ = false;
+      split_type_ = SplitFeatureType::kNone;
+      cmp_ = Operator::kNone;
     }
     /*! \brief store either leaf value or decision threshold */
     union Info {
@@ -99,23 +216,23 @@ class Tree {
 
  private:
   // vector of nodes
-  std::vector<Node> nodes_;
-  std::vector<tl_float> leaf_vector_;
-  std::vector<size_t> leaf_vector_offset_;
-  std::vector<uint32_t> left_categories_;
-  std::vector<size_t> left_categories_offset_;
+  ContiguousArray<Node> nodes_;
+  ContiguousArray<tl_float> leaf_vector_;
+  ContiguousArray<size_t> leaf_vector_offset_;
+  ContiguousArray<uint32_t> left_categories_;
+  ContiguousArray<size_t> left_categories_offset_;
 
   // allocate a new node
   inline int AllocNode() {
     int nd = num_nodes++;
     CHECK_LT(num_nodes, std::numeric_limits<int>::max())
         << "number of nodes in the tree exceed 2^31";
-    CHECK_EQ(nodes_.size(), static_cast<size_t>(nd));
+    CHECK_EQ(nodes_.Size(), static_cast<size_t>(nd));
     for (int nid = nd; nid < num_nodes; ++nid) {
-      leaf_vector_offset_.push_back(leaf_vector_offset_.back());
-      left_categories_offset_.push_back(left_categories_offset_.back());
-      nodes_.emplace_back();
-      nodes_.back().Init();
+      leaf_vector_offset_.PushBack(leaf_vector_offset_.Back());
+      left_categories_offset_.PushBack(left_categories_offset_.Back());
+      nodes_.Resize(nodes_.Size() + 1);
+      nodes_.Back().Init();
     }
     return nd;
   }
@@ -126,12 +243,11 @@ class Tree {
   /*! \brief initialize the model with a single root node */
   inline void Init() {
     num_nodes = 1;
-    leaf_vector_.clear();
-    leaf_vector_offset_ = {0, 0};
-    left_categories_.clear();
-    left_categories_offset_ = {0, 0};
-    nodes_.clear();
-    nodes_.emplace_back();
+    leaf_vector_.Clear();
+    leaf_vector_offset_.Resize(2, 0);
+    left_categories_.Clear();
+    left_categories_offset_.Resize(2, 0);
+    nodes_.Resize(1);
     nodes_[0].Init();
     SetLeaf(0, 0.0f);
   }
@@ -338,7 +454,8 @@ struct ModelParam : public dmlc::Parameter<ModelParam> {
    * \snippet src/compiler/pred_transform.cc pred_transform_db
    *
    */
-  std::string pred_transform;
+  constexpr static size_t kMaxPredTransformLength = 256;
+  char pred_transform[kMaxPredTransformLength + 1];
   /*!
    * \brief scaling parameter for sigmoid function
    * `sigmoid(x) = 1 / (1 + exp(-alpha * x))`
@@ -356,10 +473,23 @@ struct ModelParam : public dmlc::Parameter<ModelParam> {
   float global_bias;
   /*! \} */
 
+  ModelParam() : pred_transform("identity") {}
+  ~ModelParam() = default;
+  ModelParam(const ModelParam&) = default;
+  ModelParam& operator=(const ModelParam&) = default;
+  ModelParam(ModelParam&&) = default;
+  ModelParam& operator=(ModelParam&&) = default;
+
+  /* Override methods of dmlc::Parameter, since it can't handle char[] member */
+  template<typename Container>
+  inline std::vector<std::pair<std::string, std::string>>
+  InitAllowUnknown(const Container &kwargs);
+  template<typename Container>
+  inline void UpdateDict(Container *dict) const;
+  inline std::map<std::string, std::string> __DICT__() const;
+
   // declare parameters
   DMLC_DECLARE_PARAMETER(ModelParam) {
-    DMLC_DECLARE_FIELD(pred_transform).set_default("identity")
-      .describe("name of prediction transform function");
     DMLC_DECLARE_FIELD(sigmoid_alpha).set_default(1.0f)
       .set_lower_bound(0.0f)
       .describe("scaling parameter for sigmoid function");
@@ -369,7 +499,7 @@ struct ModelParam : public dmlc::Parameter<ModelParam> {
 };
 
 inline void InitParamAndCheck(ModelParam* param,
-                  const std::vector<std::pair<std::string, std::string>> cfg) {
+                              const std::vector<std::pair<std::string, std::string>> cfg) {
   auto unknown = param->InitAllowUnknown(cfg);
   if (unknown.size() > 0) {
     std::ostringstream oss;
@@ -403,6 +533,7 @@ struct Model {
   Model() {
     param.Init(std::vector<std::pair<std::string, std::string>>());
   }
+  ~Model() = default;
   Model(const Model&) = delete;
   Model& operator=(const Model&) = delete;
   Model(Model&&) = default;
@@ -417,8 +548,38 @@ struct Model {
 
 /** Implementations **/
 
-inline PyBufferInterface1D GetPyBufferFromVector(void* data, const char* format,
-                                                 size_t itemsize, size_t nitem) {
+template<typename Container>
+inline std::vector<std::pair<std::string, std::string> >
+ModelParam::InitAllowUnknown(const Container& kwargs) {
+  Container copy = kwargs;
+  for (auto it = copy.begin(); it != copy.end(); ) {
+    if (it->first == "pred_transform") {
+      std::strncpy(this->pred_transform, it->second.c_str(), kMaxPredTransformLength);
+      this->pred_transform[kMaxPredTransformLength] = '\0';
+      it = copy.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  return dmlc::Parameter<ModelParam>::InitAllowUnknown(kwargs);
+}
+
+template<typename Container>
+inline void
+ModelParam::UpdateDict(Container *dict) const {
+  dmlc::Parameter<ModelParam>::UpdateDict(dict);
+  (*dict)["pred_transform"] = std::string(this->pred_transform);
+}
+
+inline std::map<std::string, std::string>
+ModelParam::__DICT__() const {
+  auto ret = dmlc::Parameter<ModelParam>::__DICT__();
+  ret.emplace("pred_transform", std::string(this->pred_transform));
+  return ret;
+}
+
+inline PyBufferInterface1D GetPyBufferFromArray(void* data, const char* format,
+                                                size_t itemsize, size_t nitem) {
   return PyBufferInterface1D{data, const_cast<char*>(format), itemsize, nitem};
 }
 
@@ -451,23 +612,23 @@ inline const char* InferFormatString(T t) {
 }
 
 template <typename T>
-inline PyBufferInterface1D GetPyBufferFromVector(std::vector<T>& vec, const char* format) {
-  return GetPyBufferFromVector(static_cast<void*>(vec.data()), format, sizeof(T), vec.size());
+inline PyBufferInterface1D GetPyBufferFromArray(ContiguousArray<T>& vec, const char* format) {
+  return GetPyBufferFromArray(static_cast<void*>(vec.Data()), format, sizeof(T), vec.Size());
 }
 
 // Infer format string from data type; use uint8_t bytes for composite types
 template <typename T>
-inline PyBufferInterface1D GetPyBufferFromVector(std::vector<T>& vec) {
+inline PyBufferInterface1D GetPyBufferFromArray(ContiguousArray<T>& vec) {
   static_assert(sizeof(uint8_t) == 1, "Assumed sizeof(uint8_t) == 1");
   if (!std::is_arithmetic<T>::value) {
-    return GetPyBufferFromVector(static_cast<void*>(vec.data()), "=B",
-                                 sizeof(uint8_t), vec.size() * sizeof(T));
+    return GetPyBufferFromArray(static_cast<void*>(vec.Data()), "=B",
+                                 sizeof(uint8_t), vec.Size() * sizeof(T));
   }
-  return GetPyBufferFromVector(vec, InferFormatString(vec[0]));
+  return GetPyBufferFromArray(vec, InferFormatString(vec[0]));
 }
 
 inline PyBufferInterface1D GetPyBufferFromScalar(void* data, const char* format, size_t itemsize) {
-  return GetPyBufferFromVector(data, format, itemsize, 1);
+  return GetPyBufferFromArray(data, format, itemsize, 1);
 }
 
 template <typename T>
@@ -479,7 +640,7 @@ inline PyBufferInterface1D GetPyBufferFromScalar(T& scalar, const char* format) 
 template <typename T>
 inline PyBufferInterface1D GetPyBufferFromScalar(T& scalar) {
   if (!std::is_arithmetic<T>::value) {
-    return GetPyBufferFromVector(static_cast<void*>(&scalar), "=B", sizeof(uint8_t), sizeof(T));
+    return GetPyBufferFromArray(static_cast<void*>(&scalar), "=B", sizeof(uint8_t), sizeof(T));
   }
   return GetPyBufferFromScalar(scalar, InferFormatString(scalar));
 }
@@ -487,11 +648,11 @@ inline PyBufferInterface1D GetPyBufferFromScalar(T& scalar) {
 inline std::vector<PyBufferInterface1D>
 Tree::GetPyBuffer() {
   return {
-    GetPyBufferFromVector(nodes_, "T{=l=l=L=f=Q=d=d=b=b=?=?=?=?xx}"),
-    GetPyBufferFromVector(leaf_vector_),
-    GetPyBufferFromVector(leaf_vector_offset_),
-    GetPyBufferFromVector(left_categories_),
-    GetPyBufferFromVector(left_categories_offset_)
+    GetPyBufferFromArray(nodes_, "T{=l=l=L=f=Q=d=d=b=b=?=?=?=?xx}"),
+    GetPyBufferFromArray(leaf_vector_),
+    GetPyBufferFromArray(leaf_vector_offset_),
+    GetPyBufferFromArray(left_categories_),
+    GetPyBufferFromArray(left_categories_offset_)
   };
 }
 
@@ -583,14 +744,14 @@ Tree::LeafValue(int nid) const {
 
 inline std::vector<tl_float>
 Tree::LeafVector(int nid) const {
-  CHECK_LE(nid, leaf_vector_offset_.size());
+  CHECK_LE(nid, leaf_vector_offset_.Size());
   return std::vector<tl_float>(&leaf_vector_[leaf_vector_offset_[nid]],
                                &leaf_vector_[leaf_vector_offset_[nid + 1]]);
 }
 
 inline bool
 Tree::HasLeafVector(int nid) const {
-  CHECK_LE(nid, leaf_vector_offset_.size());
+  CHECK_LE(nid, leaf_vector_offset_.Size());
   return leaf_vector_offset_[nid] != leaf_vector_offset_[nid + 1];
 }
 
@@ -606,7 +767,7 @@ Tree::ComparisonOp(int nid) const {
 
 inline std::vector<uint32_t>
 Tree::LeftCategories(int nid) const {
-  CHECK_LE(nid, left_categories_offset_.size());
+  CHECK_LE(nid, left_categories_offset_.Size());
   return std::vector<uint32_t>(&left_categories_[left_categories_offset_[nid]],
                                &left_categories_[left_categories_offset_[nid + 1]]);
 }
@@ -668,18 +829,17 @@ Tree::SetCategoricalSplit(int nid, unsigned split_index, bool default_left,
     bool missing_category_to_zero, const std::vector<uint32_t>& node_left_categories) {
   CHECK_LT(split_index, (1U << 31) - 1) << "split_index too big";
 
-  const size_t end_oft = left_categories_offset_.back();
+  const size_t end_oft = left_categories_offset_.Back();
   const size_t new_end_oft = end_oft + node_left_categories.size();
-  CHECK_EQ(end_oft, left_categories_.size());
-  CHECK(std::all_of(left_categories_offset_.begin() + (nid + 1), left_categories_offset_.end(),
+  CHECK_EQ(end_oft, left_categories_.Size());
+  CHECK(std::all_of(&left_categories_offset_[nid + 1], left_categories_offset_.End(),
                     [end_oft](size_t x) { return (x == end_oft); }));
     // Hopefully we won't have to move any element as we add node_left_categories for node nid
-  left_categories_.insert(left_categories_.end(),
-                          node_left_categories.begin(), node_left_categories.end());
-  CHECK_EQ(new_end_oft, left_categories_.size());
-  std::for_each(left_categories_offset_.begin() + (nid + 1), left_categories_offset_.end(),
+  left_categories_.Extend(node_left_categories);
+  CHECK_EQ(new_end_oft, left_categories_.Size());
+  std::for_each(&left_categories_offset_[nid + 1], left_categories_offset_.End(),
                 [new_end_oft](size_t& x) { x = new_end_oft; });
-  std::sort(left_categories_.begin() + end_oft, left_categories_.end());
+  std::sort(&left_categories_[end_oft], left_categories_.End());
 
   Node& node = nodes_[nid];
   if (default_left) split_index |= (1U << 31);
@@ -699,15 +859,15 @@ Tree::SetLeaf(int nid, tl_float value) {
 
 inline void
 Tree::SetLeafVector(int nid, const std::vector<tl_float>& node_leaf_vector) {
-  const size_t end_oft = leaf_vector_offset_.back();
+  const size_t end_oft = leaf_vector_offset_.Back();
   const size_t new_end_oft = end_oft + node_leaf_vector.size();
-  CHECK_EQ(end_oft, leaf_vector_.size());
-  CHECK(std::all_of(leaf_vector_offset_.begin() + (nid + 1), leaf_vector_offset_.end(),
+  CHECK_EQ(end_oft, leaf_vector_.Size());
+  CHECK(std::all_of(&leaf_vector_offset_[nid + 1], leaf_vector_offset_.End(),
                     [end_oft](size_t x) { return (x == end_oft); }));
     // Hopefully we won't have to move any element as we add leaf vector elements for node nid
-  leaf_vector_.insert(leaf_vector_.end(), node_leaf_vector.begin(), node_leaf_vector.end());
-  CHECK_EQ(new_end_oft, leaf_vector_.size());
-  std::for_each(leaf_vector_offset_.begin() + (nid + 1), leaf_vector_offset_.end(),
+  leaf_vector_.Extend(node_leaf_vector);
+  CHECK_EQ(new_end_oft, leaf_vector_.Size());
+  std::for_each(&leaf_vector_offset_[nid + 1], leaf_vector_offset_.End(),
                 [new_end_oft](size_t& x) { x = new_end_oft; });
 
   Node& node = nodes_[nid];
