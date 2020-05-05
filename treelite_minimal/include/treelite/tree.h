@@ -17,6 +17,11 @@
 #include <type_traits>
 #include <limits>
 
+#define __TREELITE_STR(x) #x
+#define _TREELITE_STR(x) __TREELITE_STR(x)
+
+#define TREELITE_MAX_PRED_TRANSFORM_LENGTH 256
+
 namespace treelite {
 
 struct PyBufferInterface1D {
@@ -454,8 +459,7 @@ struct ModelParam : public dmlc::Parameter<ModelParam> {
    * \snippet src/compiler/pred_transform.cc pred_transform_db
    *
    */
-  constexpr static size_t kMaxPredTransformLength = 256;
-  char pred_transform[kMaxPredTransformLength + 1];
+  char pred_transform[TREELITE_MAX_PRED_TRANSFORM_LENGTH];
   /*!
    * \brief scaling parameter for sigmoid function
    * `sigmoid(x) = 1 / (1 + exp(-alpha * x))`
@@ -554,14 +558,15 @@ ModelParam::InitAllowUnknown(const Container& kwargs) {
   Container copy = kwargs;
   for (auto it = copy.begin(); it != copy.end(); ) {
     if (it->first == "pred_transform") {
-      std::strncpy(this->pred_transform, it->second.c_str(), kMaxPredTransformLength);
-      this->pred_transform[kMaxPredTransformLength] = '\0';
+      std::strncpy(this->pred_transform, it->second.c_str(),
+                   TREELITE_MAX_PRED_TRANSFORM_LENGTH - 1);
+      this->pred_transform[TREELITE_MAX_PRED_TRANSFORM_LENGTH - 1] = '\0';
       it = copy.erase(it);
     } else {
       ++it;
     }
   }
-  return dmlc::Parameter<ModelParam>::InitAllowUnknown(kwargs);
+  return dmlc::Parameter<ModelParam>::InitAllowUnknown(copy);
 }
 
 template<typename Container>
@@ -662,7 +667,7 @@ Model::GetPyBufferFromHeader() {
     GetPyBufferFromScalar(num_feature),
     GetPyBufferFromScalar(num_output_group),
     GetPyBufferFromScalar(random_forest_flag),
-    GetPyBufferFromScalar(param)
+    GetPyBufferFromScalar(param, "T{" _TREELITE_STR(TREELITE_MAX_PRED_TRANSFORM_LENGTH) "s=f=f}")
   };
 }
 

@@ -41,11 +41,15 @@ def test_round_trip(model):
                 print_byte_ndarray(frame)
             else:
                 print(f'    {repr(frame)}')
-        else:  # Node type
-            print(f'  * Frame {frame_id}: dtype Node, length {len(frame)}')
-            print('    (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, ' +
-                  'split_type_, cmp_, missing_category_to_zero_, data_count_present_, \n     ' +
-                  'sum_hess_present_, gain_present_)')
+        else:
+            if len(frame.dtype.names) == 13:  # Node type
+                print(f'  * Frame {frame_id}: dtype Node, length {len(frame)}')
+                print('    (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, ' +
+                      'split_type_, cmp_, missing_category_to_zero_, data_count_present_, \n     ' +
+                      'sum_hess_present_, gain_present_)')
+            else:  # ModelParam type
+                print(f'  * Frame {frame_id}: dtype ModelParam, length {len(frame)}')
+                print('    (pred_transform, sigmoid_alpha, global_bias)')
             print('    array([')
             for e in frame:
                 print(f'        {e}')
@@ -109,7 +113,7 @@ def tree_stump_categorical_split():
     test_round_trip(model)
 
 def tree_depth2():
-    builder = ModelBuilder(num_feature=2)
+    builder = ModelBuilder(num_feature=2, pred_transform='sigmoid', global_bias=0.5)
 
     for _ in range(2):
         tree = Tree()

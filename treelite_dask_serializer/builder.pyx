@@ -192,6 +192,8 @@ cdef class ModelBuilder:
             raise ValueError('num_output_group must be strictly positive')
         self._handle = new NativeModelBuilder(num_feature, num_output_group, random_forest)
         for key, value in kwargs.items():
+            if not isinstance(value, (str,)):
+                value = str(value)
             self._handle.SetModelParam(key.encode('utf-8'), value.encode('utf-8'))
         self.trees = []
 
