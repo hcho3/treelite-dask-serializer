@@ -477,7 +477,10 @@ struct ModelParam : public dmlc::Parameter<ModelParam> {
   float global_bias;
   /*! \} */
 
-  ModelParam() : pred_transform("identity") {}
+  ModelParam() {
+    std::memset(pred_transform, 0, TREELITE_MAX_PRED_TRANSFORM_LENGTH * sizeof(char));
+    std::strcpy(pred_transform, "identity");
+  }
   ~ModelParam() = default;
   ModelParam(const ModelParam&) = default;
   ModelParam& operator=(const ModelParam&) = default;
