@@ -591,7 +591,7 @@ inline PyBufferInterface1D GetPyBufferFromArray(void* data, const char* format,
   return PyBufferInterface1D{data, const_cast<char*>(format), itemsize, nitem};
 }
 
-// Infer format string from data type; use uint8_t bytes for composite types
+// Infer format string from data type
 template <typename T>
 inline const char* InferFormatString(T t) {
   switch (sizeof(T)) {
@@ -624,14 +624,10 @@ inline PyBufferInterface1D GetPyBufferFromArray(ContiguousArray<T>& vec, const c
   return GetPyBufferFromArray(static_cast<void*>(vec.Data()), format, sizeof(T), vec.Size());
 }
 
-// Infer format string from data type; use uint8_t bytes for composite types
 template <typename T>
 inline PyBufferInterface1D GetPyBufferFromArray(ContiguousArray<T>& vec) {
-  static_assert(sizeof(uint8_t) == 1, "Assumed sizeof(uint8_t) == 1");
-  if (!std::is_arithmetic<T>::value) {
-    return GetPyBufferFromArray(static_cast<void*>(vec.Data()), "=B",
-                                 sizeof(uint8_t), vec.Size() * sizeof(T));
-  }
+  static_assert(std::is_arithmetic<T>::value,
+      "Use GetPyBufferFromArray(vec, format) for composite types; specify format string manually");
   return GetPyBufferFromArray(vec, InferFormatString(vec[0]));
 }
 
@@ -644,12 +640,11 @@ inline PyBufferInterface1D GetPyBufferFromScalar(T& scalar, const char* format) 
   return GetPyBufferFromScalar(static_cast<void*>(&scalar), format, sizeof(T));
 }
 
-// Infer format string from data type; use uint8_t bytes for composite types
 template <typename T>
 inline PyBufferInterface1D GetPyBufferFromScalar(T& scalar) {
-  if (!std::is_arithmetic<T>::value) {
-    return GetPyBufferFromArray(static_cast<void*>(&scalar), "=B", sizeof(uint8_t), sizeof(T));
-  }
+  static_assert(std::is_arithmetic<T>::value,
+      "Use GetPyBufferFromScalar(scalar, format) for composite types; "
+      "specify format string manually");
   return GetPyBufferFromScalar(scalar, InferFormatString(scalar));
 }
 
