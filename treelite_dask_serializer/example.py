@@ -1,6 +1,6 @@
 from .serializer import serialize
 from .builder import Node, Tree, ModelBuilder
-from .treelite_model import get_frames, init_from_frames
+from .treelite_model import get_frames, init_from_frames, TreeliteModel
 import numpy as np
 
 def print_bytes(s):
@@ -31,7 +31,7 @@ def print_byte_ndarray(x):
     if len(x) % 48 != 0:	
         print()
 
-def test_round_trip(model):
+def test_round_trip(model : TreeliteModel):
     frames = [np.asarray(x) for x in get_frames(model)]
     print('Python buffer frames:')
     for frame_id, frame in enumerate(frames):

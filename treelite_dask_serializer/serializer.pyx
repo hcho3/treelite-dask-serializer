@@ -25,8 +25,8 @@ cdef TreeliteModel _deserialize(string s):
     strm.reset()
     return model
 
-def serialize(model):
+def serialize(model : TreeliteModel) -> str:
     return _serialize(model)
 
-def deserialize(s):
+def deserialize(s : str) -> TreeliteModel:
     return _deserialize(s)

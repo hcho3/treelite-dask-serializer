@@ -5,6 +5,7 @@
 
 from libcpp.utility cimport move
 from cython.operator cimport dereference as deref, preincrement as inc
+from typing import List
 
 cdef class PyBufferFrameWrapper:
     cdef PyBufferFrame _handle
@@ -78,10 +79,10 @@ cdef TreeliteModel _init_from_frames(vector[PyBufferFrame] frames):
     model._model.get().InitFromPyBuffer(frames)
     return model
 
-def get_frames(model):
+def get_frames(model : TreeliteModel) -> List[memoryview]:
     return _get_frames(model)
 
-def init_from_frames(frames):
+def init_from_frames(frames : List[memoryview]) -> TreeliteModel:
     cdef vector[PyBufferFrame] cpp_frames
     cdef Py_buffer* buf
     cdef PyBufferFrame cpp_frame
