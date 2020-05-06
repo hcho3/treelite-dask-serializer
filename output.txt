@@ -1,5 +1,5 @@
 Built a tree stump
-Python buffer frames:
+Serialized model to Python buffer frames:
   * Frame 0: dtype int32, length 1
     array([2], dtype=int32)
   * Frame 1: dtype int32, length 1
@@ -34,7 +34,7 @@ Deserialized model from Python buffer frames
 Round-trip serialization (via Python buffer) preserved all bytes
 
 Built a tree stump with leaf vector
-Python buffer frames:
+Serialized model to Python buffer frames:
   * Frame 0: dtype int32, length 1
     array([2], dtype=int32)
   * Frame 1: dtype int32, length 1
@@ -69,7 +69,7 @@ Deserialized model from Python buffer frames
 Round-trip serialization (via Python buffer) preserved all bytes
 
 Built a tree stump with a categorical split
-Python buffer frames:
+Serialized model to Python buffer frames:
   * Frame 0: dtype int32, length 1
     array([2], dtype=int32)
   * Frame 1: dtype int32, length 1
@@ -104,7 +104,7 @@ Deserialized model from Python buffer frames
 Round-trip serialization (via Python buffer) preserved all bytes
 
 Built 2 trees with depth 2, mix of categorical and numerical splits
-Python buffer frames:
+Serialized model to Python buffer frames:
   * Frame 0: dtype int32, length 1
     array([2], dtype=int32)
   * Frame 1: dtype int32, length 1

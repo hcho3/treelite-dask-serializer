@@ -1,7 +1,9 @@
-from .serializer import serialize
+from .serializer import serialize as treelite_serialize
 from .builder import Node, Tree, ModelBuilder
 from .treelite_model import get_frames, init_from_frames, TreeliteModel
 import numpy as np
+from distributed.protocol import dask_serialize, dask_deserialize, serialize, deserialize
+from typing import Tuple, Dict, List
 
 def print_bytes(s):
     for i, e in enumerate(s):
@@ -31,43 +33,47 @@ def print_byte_ndarray(x):
     if len(x) % 48 != 0:	
         print()
 
+@dask_serialize.register(TreeliteModel)
+def serialize_treelite_model(x : TreeliteModel) -> Tuple[Dict, List[memoryview]]:
+    header = {}
+    frames = get_frames(x)
+    return header, frames
+
+@dask_deserialize.register(TreeliteModel)
+def deserialize_treelite_model(header : Dict, frames: List[memoryview]):
+    return init_from_frames(frames)
+
 def test_round_trip(model : TreeliteModel):
-    frames = [np.asarray(x) for x in get_frames(model)]
-    print('Python buffer frames:')
+    header, frames = serialize(model)
+
+    print('Serialized model to Python buffer frames:')
     for frame_id, frame in enumerate(frames):
-        if getattr(frame.dtype, 'names', None) is None:
-            print(f'  * Frame {frame_id}: dtype {frame.dtype}, length {len(frame)}')
-            if frame.dtype == np.uint8:
-                print_byte_ndarray(frame)
+        _frame = np.asarray(frame)
+        if getattr(_frame.dtype, 'names', None) is None:
+            print(f'  * Frame {frame_id}: dtype {_frame.dtype}, length {len(_frame)}')
+            if _frame.dtype == np.uint8:
+                print_byte_ndarray(_frame)
             else:
-                print(f'    {repr(frame)}')
+                print(f'    {repr(_frame)}')
         else:
-            if len(frame.dtype.names) == 14:  # Node type
-                print(f'  * Frame {frame_id}: dtype Node, length {len(frame)}')
+            if len(_frame.dtype.names) == 14:  # Node type
+                print(f'  * Frame {frame_id}: dtype Node, length {len(_frame)}')
                 print('    (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, ' +
                       'split_type_, cmp_, missing_category_to_zero_, data_count_present_, \n     ' +
                       'sum_hess_present_, gain_present_, pad_)')
             else:  # ModelParam type
-                print(f'  * Frame {frame_id}: dtype ModelParam, length {len(frame)}')
+                print(f'  * Frame {frame_id}: dtype ModelParam, length {len(_frame)}')
                 print('    (pred_transform, sigmoid_alpha, global_bias)')
             print('    array([')
-            for e in frame:
+            for e in _frame:
                 print(f'        {e}')
             print('    ])')
     print()
 
-    s = serialize(model)
-    #print_bytes(s)
-
+    result = deserialize(header, frames)
     print(f'Deserialized model from Python buffer frames')
-    frames2 = [np.copy(x) for x in frames]
-    model2 = init_from_frames([memoryview(x) for x in frames2])
 
-    s2 = serialize(model2)
-    if s != s2:
-        print(f'len(s) = {len(s)}, len(s2) = {len(s2)}')
-        print_bytes(s2)
-        assert False
+    assert treelite_serialize(model) == treelite_serialize(result)
     print('Round-trip serialization (via Python buffer) preserved all bytes\n')
 
 def tree_stump():
