@@ -1,4 +1,4 @@
-from .serializer import serialize as treelite_serialize
+from .serializer import serialize as treelite2bytes  # for testing purposes only
 from .builder import Node, Tree, ModelBuilder
 from .treelite_model import get_frames, init_from_frames, TreeliteModel
 import numpy as np
@@ -73,7 +73,7 @@ def test_round_trip(model : TreeliteModel):
     result = deserialize(header, frames)
     print(f'Deserialized model from Python buffer frames')
 
-    assert treelite_serialize(model) == treelite_serialize(result)
+    assert treelite2bytes(model) == treelite2bytes(result)
     print('Round-trip serialization (via Python buffer) preserved all bytes\n')
 
 def tree_stump():
