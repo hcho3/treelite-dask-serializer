@@ -24,17 +24,11 @@
 
 namespace treelite {
 
-struct PyBufferInterface1D {
+struct PyBufferFrame {
   void* buf;
   char* format;
   size_t itemsize;
   size_t nitem;
-};
-
-struct PyBufferInterfaceTreeliteModel {
-  std::vector<PyBufferInterface1D> header_frames;
-  std::vector<PyBufferInterface1D> tree_frames;
-  size_t ntree;
 };
 
 template <typename T>
@@ -57,11 +51,22 @@ class ContiguousArray {
     other.size_ = other.capacity_ = 0;
   }
   ContiguousArray& operator=(ContiguousArray&& other) {
+    if (buf_) {
+      std::free(buf_);
+    }
     buf_ = other.buf_;
     size_ = other.size_;
     capacity_ = other.capacity_;
     other.buf_ = nullptr;
     other.size_ = other.capacity_ = 0;
+  }
+  inline void ResetBuffer(void* prealloc_buf, size_t size) {
+    if (buf_) {
+      std::free(buf_);
+    }
+    buf_ = static_cast<T*>(prealloc_buf);
+    size_ = size;
+    capacity_ = size;
   }
   inline T* Data() {
     return buf_;
@@ -217,7 +222,8 @@ class Tree {
 
   static_assert(std::is_pod<Node>::value, "Node must be a POD type");
 
-  inline std::vector<PyBufferInterface1D> GetPyBuffer();
+  inline std::vector<PyBufferFrame> GetPyBuffer();
+  inline void InitFromPyBuffer(std::vector<PyBufferFrame> frames);
 
  private:
   // vector of nodes
@@ -549,8 +555,8 @@ struct Model {
   void Serialize(dmlc::Stream* fo) const;
   void Deserialize(dmlc::Stream* fi);
 
-  inline std::vector<PyBufferInterface1D> GetPyBufferFromHeader();
-  inline PyBufferInterfaceTreeliteModel GetPyBuffer();
+  inline std::vector<PyBufferFrame> GetPyBuffer();
+  inline void InitFromPyBuffer(std::vector<PyBufferFrame> frames);
 };
 
 /** Implementations **/
@@ -586,14 +592,14 @@ ModelParam::__DICT__() const {
   return ret;
 }
 
-inline PyBufferInterface1D GetPyBufferFromArray(void* data, const char* format,
+inline PyBufferFrame GetPyBufferFromArray(void* data, const char* format,
                                                 size_t itemsize, size_t nitem) {
-  return PyBufferInterface1D{data, const_cast<char*>(format), itemsize, nitem};
+  return PyBufferFrame{data, const_cast<char*>(format), itemsize, nitem};
 }
 
 // Infer format string from data type
 template <typename T>
-inline const char* InferFormatString(T t) {
+inline const char* InferFormatString() {
   switch (sizeof(T)) {
    case 1:
      return (std::is_unsigned<T>::value ? "=B" : "=b");
@@ -620,37 +626,55 @@ inline const char* InferFormatString(T t) {
 }
 
 template <typename T>
-inline PyBufferInterface1D GetPyBufferFromArray(ContiguousArray<T>& vec, const char* format) {
+inline PyBufferFrame GetPyBufferFromArray(ContiguousArray<T>& vec, const char* format) {
   return GetPyBufferFromArray(static_cast<void*>(vec.Data()), format, sizeof(T), vec.Size());
 }
 
 template <typename T>
-inline PyBufferInterface1D GetPyBufferFromArray(ContiguousArray<T>& vec) {
+inline PyBufferFrame GetPyBufferFromArray(ContiguousArray<T>& vec) {
   static_assert(std::is_arithmetic<T>::value,
       "Use GetPyBufferFromArray(vec, format) for composite types; specify format string manually");
-  return GetPyBufferFromArray(vec, InferFormatString(vec[0]));
+  return GetPyBufferFromArray(vec, InferFormatString<T>());
 }
 
-inline PyBufferInterface1D GetPyBufferFromScalar(void* data, const char* format, size_t itemsize) {
+inline PyBufferFrame GetPyBufferFromScalar(void* data, const char* format, size_t itemsize) {
   return GetPyBufferFromArray(data, format, itemsize, 1);
 }
 
 template <typename T>
-inline PyBufferInterface1D GetPyBufferFromScalar(T& scalar, const char* format) {
+inline PyBufferFrame GetPyBufferFromScalar(T& scalar, const char* format) {
   return GetPyBufferFromScalar(static_cast<void*>(&scalar), format, sizeof(T));
 }
 
 template <typename T>
-inline PyBufferInterface1D GetPyBufferFromScalar(T& scalar) {
+inline PyBufferFrame GetPyBufferFromScalar(T& scalar) {
   static_assert(std::is_arithmetic<T>::value,
       "Use GetPyBufferFromScalar(scalar, format) for composite types; "
       "specify format string manually");
-  return GetPyBufferFromScalar(scalar, InferFormatString(scalar));
+  return GetPyBufferFromScalar(scalar, InferFormatString<T>());
 }
 
-inline std::vector<PyBufferInterface1D>
+template <typename T>
+inline void InitArrayFromPyBuffer(ContiguousArray<T>& vec, PyBufferFrame buffer) {
+  CHECK_EQ(sizeof(T), buffer.itemsize);
+  vec.ResetBuffer(buffer.buf, buffer.nitem);
+}
+
+template <typename T>
+inline void InitScalarFromPyBuffer(T& scalar, PyBufferFrame buffer) {
+  CHECK_EQ(buffer.itemsize, sizeof(T));
+  CHECK_EQ(buffer.nitem, 1);
+  T* t = static_cast<T*>(buffer.buf);
+  scalar = *t;
+  std::free(buffer.buf);
+}
+
+constexpr size_t kNumFramePerTree = 6;
+
+inline std::vector<PyBufferFrame>
 Tree::GetPyBuffer() {
   return {
+    GetPyBufferFromScalar(num_nodes),
     GetPyBufferFromArray(nodes_, "T{=l=l=L=f=Q=d=d=b=b=?=?=?=?xx}"),
     GetPyBufferFromArray(leaf_vector_),
     GetPyBufferFromArray(leaf_vector_offset_),
@@ -659,29 +683,55 @@ Tree::GetPyBuffer() {
   };
 }
 
-inline std::vector<PyBufferInterface1D>
-Model::GetPyBufferFromHeader() {
-  return {
+inline void
+Tree::InitFromPyBuffer(std::vector<PyBufferFrame> frames) {
+  size_t frame_id = 0;
+  InitScalarFromPyBuffer(num_nodes, frames[frame_id++]);
+  InitArrayFromPyBuffer(nodes_, frames[frame_id++]);
+  CHECK_EQ(num_nodes, nodes_.Size());
+  InitArrayFromPyBuffer(leaf_vector_, frames[frame_id++]);
+  InitArrayFromPyBuffer(leaf_vector_offset_, frames[frame_id++]);
+  InitArrayFromPyBuffer(left_categories_, frames[frame_id++]);
+  InitArrayFromPyBuffer(left_categories_offset_, frames[frame_id++]);
+  CHECK_EQ(frame_id, kNumFramePerTree);
+}
+
+inline std::vector<PyBufferFrame>
+Model::GetPyBuffer() {
+  /* Header */
+  std::vector<PyBufferFrame> frames{
     GetPyBufferFromScalar(num_feature),
     GetPyBufferFromScalar(num_output_group),
     GetPyBufferFromScalar(random_forest_flag),
     GetPyBufferFromScalar(param, "T{" _TREELITE_STR(TREELITE_MAX_PRED_TRANSFORM_LENGTH) "s=f=f}")
   };
-}
-
-inline PyBufferInterfaceTreeliteModel
-Model::GetPyBuffer() {
-  PyBufferInterfaceTreeliteModel buffer;
-  /* Header */
-  buffer.header_frames = GetPyBufferFromHeader();
 
   /* Body */
   for (auto& tree : trees) {
-    std::vector<PyBufferInterface1D> frames = tree.GetPyBuffer();
-    buffer.tree_frames.insert(buffer.tree_frames.end(), frames.begin(), frames.end());
+    auto tree_frames = tree.GetPyBuffer();
+    frames.insert(frames.end(), tree_frames.begin(), tree_frames.end());
   }
-  buffer.ntree = trees.size();
-  return buffer;
+  return frames;
+}
+
+inline void
+Model::InitFromPyBuffer(std::vector<PyBufferFrame> frames) {
+  /* Header */
+  size_t frame_id = 0;
+  InitScalarFromPyBuffer(num_feature, frames[frame_id++]);
+  InitScalarFromPyBuffer(num_output_group, frames[frame_id++]);
+  InitScalarFromPyBuffer(random_forest_flag, frames[frame_id++]);
+  InitScalarFromPyBuffer(param, frames[frame_id++]);
+  /* Body */
+  const size_t num_frame = frames.size();
+  CHECK_EQ((num_frame - frame_id) % kNumFramePerTree, 0);
+  trees.clear();
+  for (; frame_id < num_frame; frame_id += kNumFramePerTree) {
+    std::vector<PyBufferFrame> tree_frames(frames.begin() + frame_id,
+                                           frames.begin() + frame_id + kNumFramePerTree);
+    trees.emplace_back();
+    trees.back().InitFromPyBuffer(tree_frames);
+  }
 }
 
 inline std::vector<unsigned>

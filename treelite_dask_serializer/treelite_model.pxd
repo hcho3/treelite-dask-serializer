@@ -16,15 +16,11 @@ cdef extern from "treelite/tree.h" namespace "treelite::Tree":
         void Deserialize(Stream* fi) except +
 
 cdef extern from "treelite/tree.h" namespace "treelite":
-    cdef cppclass PyBufferInterface1D:
+    cdef cppclass PyBufferFrame:
         void* buf
         char* format
         size_t itemsize
         size_t nitem
-    cdef cppclass PyBufferInterfaceTreeliteModel:
-        vector[PyBufferInterface1D] header_frames
-        vector[PyBufferInterface1D] tree_frames
-        size_t ntree
     cdef cppclass Tree:
         void Init() except +
         void Serialize(Stream* fo) except +
@@ -40,7 +36,7 @@ cdef extern from "treelite/tree.h" namespace "treelite":
         Model() except +
         void Serialize(Stream* fo) except +
         void Deserialize(Stream* fi) except +
-        PyBufferInterfaceTreeliteModel GetPyBuffer() except +
+        vector[PyBufferFrame] GetPyBuffer() except +
 
 cdef class TreeliteModel:
     cdef unique_ptr[Model] _model

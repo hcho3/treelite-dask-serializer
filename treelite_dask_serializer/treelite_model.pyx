@@ -6,8 +6,8 @@
 from libcpp.utility cimport move
 from cython.operator cimport dereference as deref, preincrement as inc
 
-cdef class PyBuffer1DWrapper:
-    cdef PyBufferInterface1D _handle
+cdef class PyBufferFrameWrapper:
+    cdef PyBufferFrame _handle
     cdef Py_ssize_t shape[1]
     cdef Py_ssize_t strides[1]
 
@@ -38,8 +38,8 @@ cdef class PyBuffer1DWrapper:
     def __releasebuffer__(self, Py_buffer *buffer):
         pass
 
-cdef PyBuffer1DWrapper MakePyBuffer1DWrapper(PyBufferInterface1D handle):
-    cdef PyBuffer1DWrapper wrapper = PyBuffer1DWrapper()
+cdef PyBufferFrameWrapper MakePyBufferFrameWrapper(PyBufferFrame handle):
+    cdef PyBufferFrameWrapper wrapper = PyBufferFrameWrapper()
     wrapper._handle = handle
     return wrapper
 
@@ -64,17 +64,11 @@ cdef TreeliteModel make_stump():
 
 cdef list _get_frames(TreeliteModel model):
     frames = []
-    cdef PyBufferInterfaceTreeliteModel interface = model._model.get().GetPyBuffer()
-    cdef vector[PyBufferInterface1D].iterator it = interface.header_frames.begin()
-    while it != interface.header_frames.end():
+    cdef vector[PyBufferFrame] interface = model._model.get().GetPyBuffer()
+    cdef vector[PyBufferFrame].iterator it = interface.begin()
+    while it != interface.end():
         v = deref(it)
-        w = MakePyBuffer1DWrapper(v)
-        frames.append(memoryview(w))
-        inc(it)
-    it = interface.tree_frames.begin()
-    while it != interface.tree_frames.end():
-        v = deref(it)
-        w = MakePyBuffer1DWrapper(v)
+        w = MakePyBufferFrameWrapper(v)
         frames.append(memoryview(w))
         inc(it)
     return frames

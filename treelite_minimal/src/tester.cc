@@ -4,6 +4,16 @@
 #include <dmlc/memory_io.h>
 #include <memory>
 #include <string>
+#include <algorithm>
+#include <iterator>
+
+treelite::PyBufferFrame DuplicatePyBufferFrame(treelite::PyBufferFrame frame) {
+  const size_t nbyte = frame.itemsize * frame.nitem;
+  void* buf = std::malloc(nbyte);
+  CHECK(buf);
+  std::memcpy(buf, frame.buf, nbyte);
+  return treelite::PyBufferFrame{buf, frame.format, frame.itemsize, frame.nitem};
+}
 
 int main(void) {
   treelite::frontend::ModelBuilder builder(2, 1, false);
@@ -23,25 +33,27 @@ int main(void) {
     builder.InsertTree(&tree, -1);
   }
 
-  std::unique_ptr<treelite::Model> model(new treelite::Model());
-  CHECK(builder.CommitModel(model.get()));
+  treelite::Model model;
+  CHECK(builder.CommitModel(&model));
 
-  CHECK_EQ(model->trees.size(), 2);
-  
+  CHECK_EQ(model.trees.size(), 2);
+
   std::string s, s2;
   {
     std::unique_ptr<dmlc::Stream> strm(new dmlc::MemoryStringStream(&s));
-    model->Serialize(strm.get());
+    model.Serialize(strm.get());
   }
-  model.reset();
-  std::unique_ptr<treelite::Model> model2(new treelite::Model());
-  {
-    std::unique_ptr<dmlc::Stream> strm(new dmlc::MemoryStringStream(&s));
-    model2->Deserialize(strm.get());
-  }
+
+  std::vector<treelite::PyBufferFrame> frames = model.GetPyBuffer();
+  std::vector<treelite::PyBufferFrame> frames2;
+  std::transform(frames.begin(), frames.end(), std::back_inserter(frames2),
+      [](treelite::PyBufferFrame x) { return DuplicatePyBufferFrame(x); });
+
+  treelite::Model model2;
+  model2.InitFromPyBuffer(frames2);
   {
     std::unique_ptr<dmlc::Stream> strm(new dmlc::MemoryStringStream(&s2));
-    model2->Serialize(strm.get());
+    model2.Serialize(strm.get());
   }
   CHECK_EQ(s, s2);
 
