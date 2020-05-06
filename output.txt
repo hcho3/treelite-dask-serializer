@@ -11,38 +11,27 @@ Python buffer frames:
     array([
         (b'identity', 1., 0.)
     ])
-  * Frame 4: dtype Node, length 3
+  * Frame 4: dtype int32, length 1
+    array([3], dtype=int32)
+  * Frame 5: dtype Node, length 3
     (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, split_type_, cmp_, missing_category_to_zero_, data_count_present_, 
-     sum_hess_present_, gain_present_)
+     sum_hess_present_, gain_present_, pad_)
     array([
-        (1, 2, 2147483648, 0., 0, 0., 0., 1, 2, False, False, False, False)
-        (-1, -1, 0, -1., 0, 0., 0., 0, 0, False, False, False, False)
-        (-1, -1, 0, 1., 0, 0., 0., 0, 0, False, False, False, False)
+        (1, 2, 2147483648, 0., 0, 0., 0., 1, 2, False, False, False, False, 0)
+        (-1, -1, 0, -1., 0, 0., 0., 0, 0, False, False, False, False, 0)
+        (-1, -1, 0, 1., 0, 0., 0., 0, 0, False, False, False, False, 0)
     ])
-  * Frame 5: dtype float32, length 0
+  * Frame 6: dtype float32, length 0
     array([], dtype=float32)
-  * Frame 6: dtype uint64, length 4
+  * Frame 7: dtype uint64, length 4
     array([0, 0, 0, 0], dtype=uint64)
-  * Frame 7: dtype uint32, length 0
+  * Frame 8: dtype uint32, length 0
     array([], dtype=uint32)
-  * Frame 8: dtype uint64, length 4
+  * Frame 9: dtype uint64, length 4
     array([0, 0, 0, 0], dtype=uint64)
 
-Serialized model bytes (533 bytes):
-    02 00 00 00 01 00 00 00 00 69 64 65 6E 74 69 74  79 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 80 3F 00 00 00  00 01 00 00 00 00 00 00 00 03 00 00 00 00 00 00
-    00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00
-    00 00 00 00 00 01 00 00 00 02 00 00 00 00 00 00  80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 01 02 00
-    00 00 00 3E 3E FF FF FF FF FF FF FF FF 00 00 00  00 00 00 80 BF 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 6C 73 FF FF FF FF FF FF FF FF 00 00 00  00 00 00 80 3F 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 0A 3E 
-Deserialized model
-Round-trip conversion preserved all bytes
+Deserialized model from Python buffer frames
+Round-trip serialization (via Python buffer) preserved all bytes
 
 Built a tree stump with leaf vector
 Python buffer frames:
@@ -57,38 +46,27 @@ Python buffer frames:
     array([
         (b'identity', 1., 0.)
     ])
-  * Frame 4: dtype Node, length 3
+  * Frame 4: dtype int32, length 1
+    array([3], dtype=int32)
+  * Frame 5: dtype Node, length 3
     (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, split_type_, cmp_, missing_category_to_zero_, data_count_present_, 
-     sum_hess_present_, gain_present_)
+     sum_hess_present_, gain_present_, pad_)
     array([
-        (1, 2, 2147483648, 0., 0, 0., 0., 1, 2, False, False, False, False)
-        (-1, -1, 0, 0., 0, 0., 0., 0, 0, False, False, False, False)
-        (-1, -1, 0, 0., 0, 0., 0., 0, 0, False, False, False, False)
+        (1, 2, 2147483648, 0., 0, 0., 0., 1, 2, False, False, False, False, 0)
+        (-1, -1, 0, 0., 0, 0., 0., 0, 0, False, False, False, False, 0)
+        (-1, -1, 0, 0., 0, 0., 0., 0, 0, False, False, False, False, 0)
     ])
-  * Frame 5: dtype float32, length 4
+  * Frame 6: dtype float32, length 4
     array([-1.,  1.,  1., -1.], dtype=float32)
-  * Frame 6: dtype uint64, length 4
+  * Frame 7: dtype uint64, length 4
     array([0, 0, 2, 4], dtype=uint64)
-  * Frame 7: dtype uint32, length 0
+  * Frame 8: dtype uint32, length 0
     array([], dtype=uint32)
-  * Frame 8: dtype uint64, length 4
+  * Frame 9: dtype uint64, length 4
     array([0, 0, 0, 0], dtype=uint64)
 
-Serialized model bytes (549 bytes):
-    02 00 00 00 02 00 00 00 01 69 64 65 6E 74 69 74  79 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 80 3F 00 00 00  00 01 00 00 00 00 00 00 00 03 00 00 00 04 00 00
-    00 00 00 00 00 00 00 80 BF 00 00 80 3F 00 00 80  3F 00 00 80 BF 04 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00
-    00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00  00 00 00 00 00 01 00 00 00 02 00 00 00 00 00 00  80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 01 02 00  00 00 00 3E 3E FF FF FF FF FF FF FF FF 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 0A 0A FF FF FF FF FF FF FF FF 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 
-Deserialized model
-Round-trip conversion preserved all bytes
+Deserialized model from Python buffer frames
+Round-trip serialization (via Python buffer) preserved all bytes
 
 Built a tree stump with a categorical split
 Python buffer frames:
@@ -103,38 +81,27 @@ Python buffer frames:
     array([
         (b'identity', 1., 0.)
     ])
-  * Frame 4: dtype Node, length 3
+  * Frame 4: dtype int32, length 1
+    array([3], dtype=int32)
+  * Frame 5: dtype Node, length 3
     (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, split_type_, cmp_, missing_category_to_zero_, data_count_present_, 
-     sum_hess_present_, gain_present_)
+     sum_hess_present_, gain_present_, pad_)
     array([
-        (1, 2, 2147483648, 0., 0, 0., 0., 2, 0, False, False, False, False)
-        (-1, -1, 0, -1., 0, 0., 0., 0, 0, False, False, False, False)
-        (-1, -1, 0, 1., 0, 0., 0., 0, 0, False, False, False, False)
+        (1, 2, 2147483648, 0., 0, 0., 0., 2, 0, False, False, False, False, 0)
+        (-1, -1, 0, -1., 0, 0., 0., 0, 0, False, False, False, False, 0)
+        (-1, -1, 0, 1., 0, 0., 0., 0, 0, False, False, False, False, 0)
     ])
-  * Frame 5: dtype float32, length 0
+  * Frame 6: dtype float32, length 0
     array([], dtype=float32)
-  * Frame 6: dtype uint64, length 4
+  * Frame 7: dtype uint64, length 4
     array([0, 0, 0, 0], dtype=uint64)
-  * Frame 7: dtype uint32, length 2
+  * Frame 8: dtype uint32, length 2
     array([0, 1], dtype=uint32)
-  * Frame 8: dtype uint64, length 4
+  * Frame 9: dtype uint64, length 4
     array([0, 2, 2, 2], dtype=uint64)
 
-Serialized model bytes (541 bytes):
-    02 00 00 00 01 00 00 00 00 69 64 65 6E 74 69 74  79 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 80 3F 00 00 00  00 01 00 00 00 00 00 00 00 03 00 00 00 00 00 00
-    00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00
-    00 00 00 00 00 00 00 00 00 01 00 00 00 04 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00  00 00 00 00 00 02 00 00 00 00 00 00 00 02 00 00
-    00 00 00 00 00 03 00 00 00 00 00 00 00 01 00 00  00 02 00 00 00 00 00 00 80 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 02 00 00 00 00 00 3E 3E FF FF FF  FF FF FF FF FF 00 00 00 00 00 00 80 BF 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 0A 0A FF FF FF  FF FF FF FF FF 00 00 00 00 00 00 80 3F 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 
-Deserialized model
-Round-trip conversion preserved all bytes
+Deserialized model from Python buffer frames
+Round-trip serialization (via Python buffer) preserved all bytes
 
 Built 2 trees with depth 2, mix of categorical and numerical splits
 Python buffer frames:
@@ -149,76 +116,51 @@ Python buffer frames:
     array([
         (b'sigmoid', 1., 0.5)
     ])
-  * Frame 4: dtype Node, length 7
+  * Frame 4: dtype int32, length 1
+    array([7], dtype=int32)
+  * Frame 5: dtype Node, length 7
     (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, split_type_, cmp_, missing_category_to_zero_, data_count_present_, 
-     sum_hess_present_, gain_present_)
+     sum_hess_present_, gain_present_, pad_)
     array([
-        (1, 2, 2147483648, 0., 0, 0., 0., 1, 2, False, False, False, False)
-        (3, 4, 2147483648, 0., 0, 0., 0., 2, 0, False, False, False, False)
-        (5, 6, 2147483649, 0., 0, 0., 0., 2, 0, False, False, False, False)
-        (-1, -1, 0, -2., 0, 0., 0., 0, 0, False, False, False, False)
-        (-1, -1, 0, 1., 0, 0., 0., 0, 0, False, False, False, False)
-        (-1, -1, 0, -1., 0, 0., 0., 0, 0, False, False, False, False)
-        (-1, -1, 0, 2., 0, 0., 0., 0, 0, False, False, False, False)
+        (1, 2, 2147483648, 0., 0, 0., 0., 1, 2, False, False, False, False, 0)
+        (3, 4, 2147483648, 0., 0, 0., 0., 2, 0, False, False, False, False, 0)
+        (5, 6, 2147483649, 0., 0, 0., 0., 2, 0, False, False, False, False, 0)
+        (-1, -1, 0, -2., 0, 0., 0., 0, 0, False, False, False, False, 0)
+        (-1, -1, 0, 1., 0, 0., 0., 0, 0, False, False, False, False, 0)
+        (-1, -1, 0, -1., 0, 0., 0., 0, 0, False, False, False, False, 0)
+        (-1, -1, 0, 2., 0, 0., 0., 0, 0, False, False, False, False, 0)
     ])
-  * Frame 5: dtype float32, length 0
+  * Frame 6: dtype float32, length 0
     array([], dtype=float32)
-  * Frame 6: dtype uint64, length 8
+  * Frame 7: dtype uint64, length 8
     array([0, 0, 0, 0, 0, 0, 0, 0], dtype=uint64)
-  * Frame 7: dtype uint32, length 3
+  * Frame 8: dtype uint32, length 3
     array([0, 1, 0], dtype=uint32)
-  * Frame 8: dtype uint64, length 8
+  * Frame 9: dtype uint64, length 8
     array([0, 0, 2, 3, 3, 3, 3, 3], dtype=uint64)
-  * Frame 9: dtype Node, length 7
+  * Frame 10: dtype int32, length 1
+    array([7], dtype=int32)
+  * Frame 11: dtype Node, length 7
     (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, split_type_, cmp_, missing_category_to_zero_, data_count_present_, 
-     sum_hess_present_, gain_present_)
+     sum_hess_present_, gain_present_, pad_)
     array([
-        (1, 2, 2147483648, 0., 0, 0., 0., 1, 2, False, False, False, False)
-        (3, 4, 2147483648, 0., 0, 0., 0., 2, 0, False, False, False, False)
-        (5, 6, 2147483649, 0., 0, 0., 0., 2, 0, False, False, False, False)
-        (-1, -1, 0, -2., 0, 0., 0., 0, 0, False, False, False, False)
-        (-1, -1, 0, 1., 0, 0., 0., 0, 0, False, False, False, False)
-        (-1, -1, 0, -1., 0, 0., 0., 0, 0, False, False, False, False)
-        (-1, -1, 0, 2., 0, 0., 0., 0, 0, False, False, False, False)
+        (1, 2, 2147483648, 0., 0, 0., 0., 1, 2, False, False, False, False, 0)
+        (3, 4, 2147483648, 0., 0, 0., 0., 2, 0, False, False, False, False, 0)
+        (5, 6, 2147483649, 0., 0, 0., 0., 2, 0, False, False, False, False, 0)
+        (-1, -1, 0, -2., 0, 0., 0., 0, 0, False, False, False, False, 0)
+        (-1, -1, 0, 1., 0, 0., 0., 0, 0, False, False, False, False, 0)
+        (-1, -1, 0, -1., 0, 0., 0., 0, 0, False, False, False, False, 0)
+        (-1, -1, 0, 2., 0, 0., 0., 0, 0, False, False, False, False, 0)
     ])
-  * Frame 10: dtype float32, length 0
+  * Frame 12: dtype float32, length 0
     array([], dtype=float32)
-  * Frame 11: dtype uint64, length 8
-    array([0, 0, 0, 0, 0, 0, 0, 0], dtype=uint64)
-  * Frame 12: dtype uint32, length 3
-    array([0, 1, 0], dtype=uint32)
   * Frame 13: dtype uint64, length 8
+    array([0, 0, 0, 0, 0, 0, 0, 0], dtype=uint64)
+  * Frame 14: dtype uint32, length 3
+    array([0, 1, 0], dtype=uint32)
+  * Frame 15: dtype uint64, length 8
     array([0, 0, 2, 3, 3, 3, 3, 3], dtype=uint64)
 
-Serialized model bytes (1321 bytes):
-    02 00 00 00 01 00 00 00 00 73 69 67 6D 6F 69 64  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 80 3F 00 00 00  3F 02 00 00 00 00 00 00 00 07 00 00 00 00 00 00
-    00 00 00 00 00 08 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00  00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00
-    00 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00  00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00
-    00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00  00 03 00 00 00 00 00 00 00 07 00 00 00 00 00 00  00 01 00 00 00 02 00 00 00 00 00 00 80 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 01 02 00 00 00 00 00  00 03 00 00 00 04 00 00 00 00 00 00 80 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00  00 05 00 00 00 06 00 00 00 01 00 00 80 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00  00 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00
-    C0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 FF FF FF FF FF FF FF FF 00 00 00 00 00 00 80
-    3F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 6E  6A FF FF FF FF FF FF FF FF 00 00 00 00 00 00 80
-    BF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 70  2E FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00
-    40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 20  2A 07 00 00 00 00 00 00 00 00 00 00 00 08 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00  00 01 00 00 00 00 00 00 00 08 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 02 00 00 00 00 00 00 00 03 00 00 00 00 00 00  00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00
-    00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00  00 07 00 00 00 00 00 00 00 01 00 00 00 02 00 00  00 00 00 00 80 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 01 02 00 00 00 00 00 00 03 00 00 00 04 00 00  00 00 00 00 80 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 02 00 00 00 00 00 00 00 05 00 00 00 06 00 00  00 01 00 00 80 00 00 00 00 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 02 00 00 00 00 00 32 2A FF FF FF FF FF FF FF  FF 00 00 00 00 00 00 00 C0 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 27 29 FF FF FF FF FF FF FF  FF 00 00 00 00 00 00 80 3F 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 32 5D FF FF FF FF FF FF FF  FF 00 00 00 00 00 00 80 BF 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF  FF 00 00 00 00 00 00 00 40 00 00 00 00 00 00 00
-    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00 00 
-Deserialized model
-Round-trip conversion preserved all bytes
+Deserialized model from Python buffer frames
+Round-trip serialization (via Python buffer) preserved all bytes
 

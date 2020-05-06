@@ -57,10 +57,9 @@ def test_round_trip(model):
     print()
 
     s = serialize(model)
-    print(f'Serialized model bytes ({len(s)} bytes):')
-    print_bytes(s)
+    #print_bytes(s)
 
-    print(f'Deserialized model')
+    print(f'Deserialized model from Python buffer frames')
     frames2 = [np.copy(x) for x in frames]
     model2 = init_from_frames([memoryview(x) for x in frames2])
 
@@ -69,7 +68,7 @@ def test_round_trip(model):
         print(f'len(s) = {len(s)}, len(s2) = {len(s2)}')
         print_bytes(s2)
         assert False
-    print('Round-trip conversion preserved all bytes\n')
+    print('Round-trip serialization (via Python buffer) preserved all bytes\n')
 
 def tree_stump():
     builder = ModelBuilder(num_feature=2)

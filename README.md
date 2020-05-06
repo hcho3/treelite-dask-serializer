@@ -3,10 +3,8 @@
 ## Notable features
 * Revised Treelite object representaion: now all tree fields are flat and can be serialized very efficiently
 * Minimal port of Treelite: only model builder and definition are included here.
-* Cython, to seamlessly integrate C++ code with Python
-
-## WIP
-* Implement Python Buffer protocol, so that tree object can be serialized zero-copy. (Right now one copy is made.)
+* Uses Cython to seamlessly integrate C++ code with Python
+* Implements Python Buffer protocol, so that tree object can be serialized zero-copy.
 
 ## TODOs
 * Integrate with Dask via a custom serializer hook.

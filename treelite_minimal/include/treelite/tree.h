@@ -34,68 +34,81 @@ struct PyBufferFrame {
 template <typename T>
 class ContiguousArray {
  public:
-  ContiguousArray()
-    : buf_(nullptr), size_(0), capacity_(0) {}
-  ContiguousArray(void* prealloc_buf, size_t size)
-    : buf_(static_cast<T*>(prealloc_buf)), size_(size) {}
+  ContiguousArray() : buffer_(nullptr), size_(0), capacity_(0), owned_buffer_(true) {}
   ~ContiguousArray() {
-    if (buf_) {
-      std::free(buf_);
+    if (buffer_ && owned_buffer_) {
+      std::free(buffer_);
     }
   }
+  // NOTE: use Clone to make deep copy; copy constructors disabled
   ContiguousArray(const ContiguousArray&) = delete;
   ContiguousArray& operator=(const ContiguousArray&) = delete;
   ContiguousArray(ContiguousArray&& other)
-      : buf_(other.buf_), size_(other.size_), capacity_(other.capacity_) {
-    other.buf_ = nullptr;
+      : buffer_(other.buffer_), size_(other.size_), capacity_(other.capacity_),
+        owned_buffer_(other.owned_buffer_) {
+    other.buffer_ = nullptr;
     other.size_ = other.capacity_ = 0;
   }
   ContiguousArray& operator=(ContiguousArray&& other) {
-    if (buf_) {
-      std::free(buf_);
+    if (buffer_ && owned_buffer_) {
+      std::free(buffer_);
     }
-    buf_ = other.buf_;
+    buffer_ = other.buffer_;
     size_ = other.size_;
     capacity_ = other.capacity_;
-    other.buf_ = nullptr;
+    owned_buffer_ = other.owned_buffer_;
+    other.buffer_ = nullptr;
     other.size_ = other.capacity_ = 0;
   }
-  inline void ResetBuffer(void* prealloc_buf, size_t size) {
-    if (buf_) {
-      std::free(buf_);
+  inline ContiguousArray Clone() const {
+    ContiguousArray clone;
+    clone.buffer_ = static_cast<T*>(std::malloc(sizeof(T) * capacity_));
+    CHECK(clone.buffer_);
+    std::memcpy(clone.buffer_, buffer_, sizeof(T) * size_);
+    clone.size_ = size_;
+    clone.capacity_ = capacity_;
+    clone.owned_buffer_ = true;
+    return clone;
+  }
+  inline void UseForeignBuffer(void* prealloc_buf, size_t size) {
+    if (buffer_ && owned_buffer_) {
+      std::free(buffer_);
     }
-    buf_ = static_cast<T*>(prealloc_buf);
+    buffer_ = static_cast<T*>(prealloc_buf);
     size_ = size;
     capacity_ = size;
+    owned_buffer_ = false;
   }
   inline T* Data() {
-    return buf_;
+    return buffer_;
   }
   inline const T* Data() const {
-    return buf_;
+    return buffer_;
   }
   inline T* End() { 
-    return &buf_[Size()];
+    return &buffer_[Size()];
   }
   inline const T* End() const {
-    return &buf_[Size()];
+    return &buffer_[Size()];
   }
   inline T& Back() {
-    return buf_[Size() - 1];
+    return buffer_[Size() - 1];
   }
   inline const T& Back() const {
-    return buf_[Size() - 1];
+    return buffer_[Size() - 1];
   }
   inline size_t Size() const {
     return size_;
   }
   inline void Reserve(size_t newsize) {
-    T* newbuf = static_cast<T*>(std::realloc(static_cast<void*>(buf_), sizeof(T) * newsize));
+    CHECK(owned_buffer_) << "Cannot resize when using a foreign buffer; clone first";
+    T* newbuf = static_cast<T*>(std::realloc(static_cast<void*>(buffer_), sizeof(T) * newsize));
     CHECK(newbuf);
-    buf_ = newbuf;
+    buffer_ = newbuf;
     capacity_ = newsize;
   }
   inline void Resize(size_t newsize) {
+    CHECK(owned_buffer_) << "Cannot resize when using a foreign buffer; clone first";
     if (newsize > capacity_) {
       size_t newcapacity = capacity_;
       if (newcapacity == 0) {
@@ -109,22 +122,26 @@ class ContiguousArray {
     size_ = newsize;
   }
   inline void Resize(size_t newsize, T t) {
+    CHECK(owned_buffer_) << "Cannot resize when using a foreign buffer; clone first";
     size_t oldsize = Size();
     Resize(newsize);
     for (size_t i = oldsize; i < newsize; ++i) {
-      buf_[i] = t;
+      buffer_[i] = t;
     }
   }
   inline void Clear() {
+    CHECK(owned_buffer_) << "Cannot clear when using a foreign buffer; clone first";
     Resize(0);
   }
   inline void PushBack(T t) {
+    CHECK(owned_buffer_) << "Cannot add element when using a foreign buffer; clone first";
     if (size_ == capacity_) {
       Reserve(capacity_ * 2);
     }
-    buf_[size_++] = t;
+    buffer_[size_++] = t;
   }
   inline void Extend(const std::vector<T>& other) {
+    CHECK(owned_buffer_) << "Cannot add elements when using a foreign buffer; clone first";
     size_t newsize = size_ + other.size();
     if (newsize > capacity_) {
       size_t newcapacity = capacity_;
@@ -136,20 +153,21 @@ class ContiguousArray {
       }
       Reserve(newcapacity);
     }
-    std::memcpy(&buf_[size_], static_cast<const void*>(other.data()), sizeof(T) * other.size());
+    std::memcpy(&buffer_[size_], static_cast<const void*>(other.data()), sizeof(T) * other.size());
     size_ = newsize;
   }
   inline T& operator[](size_t idx) {
-    return buf_[idx];
+    return buffer_[idx];
   } 
   inline const T& operator[](size_t idx) const {
-    return buf_[idx];
+    return buffer_[idx];
   } 
   static_assert(std::is_pod<T>::value, "T must be POD");
  private:
-  T* buf_;
+  T* buffer_;
   size_t size_;
   size_t capacity_;
+  bool owned_buffer_;
 };
 
 /*! \brief in-memory representation of a decision tree */
@@ -661,7 +679,7 @@ inline PyBufferFrame GetPyBufferFromScalar(T& scalar) {
 template <typename T>
 inline void InitArrayFromPyBuffer(ContiguousArray<T>& vec, PyBufferFrame buffer) {
   CHECK_EQ(sizeof(T), buffer.itemsize);
-  vec.ResetBuffer(buffer.buf, buffer.nitem);
+  vec.UseForeignBuffer(buffer.buf, buffer.nitem);
 }
 
 template <typename T>
@@ -670,7 +688,6 @@ inline void InitScalarFromPyBuffer(T& scalar, PyBufferFrame buffer) {
   CHECK_EQ(buffer.nitem, 1);
   T* t = static_cast<T*>(buffer.buf);
   scalar = *t;
-  //std::free(buffer.buf);
 }
 
 constexpr size_t kNumFramePerTree = 6;
