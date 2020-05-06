@@ -168,6 +168,7 @@ class Tree {
       data_count_present_ = sum_hess_present_ = gain_present_ = false;
       split_type_ = SplitFeatureType::kNone;
       cmp_ = Operator::kNone;
+      pad_ = 0;
     }
     /*! \brief store either leaf value or decision threshold */
     union Info {
@@ -218,9 +219,12 @@ class Tree {
     bool sum_hess_present_;
     /*! \brief whether gain_present_ field is present */
     bool gain_present_;
+    // padding
+    uint16_t pad_;
   };
 
   static_assert(std::is_pod<Node>::value, "Node must be a POD type");
+  static_assert(sizeof(Node) == 48, "Node must be 48 bytes");
 
   inline std::vector<PyBufferFrame> GetPyBuffer();
   inline void InitFromPyBuffer(std::vector<PyBufferFrame> frames);
@@ -666,7 +670,7 @@ inline void InitScalarFromPyBuffer(T& scalar, PyBufferFrame buffer) {
   CHECK_EQ(buffer.nitem, 1);
   T* t = static_cast<T*>(buffer.buf);
   scalar = *t;
-  std::free(buffer.buf);
+  //std::free(buffer.buf);
 }
 
 constexpr size_t kNumFramePerTree = 6;
@@ -675,7 +679,7 @@ inline std::vector<PyBufferFrame>
 Tree::GetPyBuffer() {
   return {
     GetPyBufferFromScalar(num_nodes),
-    GetPyBufferFromArray(nodes_, "T{=l=l=L=f=Q=d=d=b=b=?=?=?=?xx}"),
+    GetPyBufferFromArray(nodes_, "T{=l=l=L=f=Q=d=d=b=b=?=?=?=?=H}"),
     GetPyBufferFromArray(leaf_vector_),
     GetPyBufferFromArray(leaf_vector_offset_),
     GetPyBufferFromArray(left_categories_),

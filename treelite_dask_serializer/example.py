@@ -1,6 +1,6 @@
-from .serializer import serialize, deserialize
+from .serializer import serialize
 from .builder import Node, Tree, ModelBuilder
-from .treelite_model import get_frames
+from .treelite_model import get_frames, init_from_frames
 import numpy as np
 
 def print_bytes(s):
@@ -42,11 +42,11 @@ def test_round_trip(model):
             else:
                 print(f'    {repr(frame)}')
         else:
-            if len(frame.dtype.names) == 13:  # Node type
+            if len(frame.dtype.names) == 14:  # Node type
                 print(f'  * Frame {frame_id}: dtype Node, length {len(frame)}')
                 print('    (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, ' +
                       'split_type_, cmp_, missing_category_to_zero_, data_count_present_, \n     ' +
-                      'sum_hess_present_, gain_present_)')
+                      'sum_hess_present_, gain_present_, pad_)')
             else:  # ModelParam type
                 print(f'  * Frame {frame_id}: dtype ModelParam, length {len(frame)}')
                 print('    (pred_transform, sigmoid_alpha, global_bias)')
@@ -60,10 +60,15 @@ def test_round_trip(model):
     print(f'Serialized model bytes ({len(s)} bytes):')
     print_bytes(s)
 
-    model2 = deserialize(s)
     print(f'Deserialized model')
+    frames2 = [np.copy(x) for x in frames]
+    model2 = init_from_frames([memoryview(x) for x in frames2])
+
     s2 = serialize(model2)
-    assert s == s2, f'len(s2) = {len(s2)}'
+    if s != s2:
+        print(f'len(s) = {len(s)}, len(s2) = {len(s2)}')
+        print_bytes(s2)
+        assert False
     print('Round-trip conversion preserved all bytes\n')
 
 def tree_stump():

@@ -14,7 +14,7 @@ cdef string _serialize(TreeliteModel model) except *:
     cdef unique_ptr[Stream] strm
     strm.reset(new MemoryStringStream(&s))
     model._model.get().Serialize(strm.get())
-    strm.release()
+    strm.reset()
     return s
 
 cdef TreeliteModel _deserialize(string s):
@@ -22,7 +22,7 @@ cdef TreeliteModel _deserialize(string s):
     cdef unique_ptr[Stream] strm
     strm.reset(new MemoryStringStream(&s))
     model._model.get().Deserialize(strm.get())
-    strm.release()
+    strm.reset()
     return model
 
 def serialize(model):

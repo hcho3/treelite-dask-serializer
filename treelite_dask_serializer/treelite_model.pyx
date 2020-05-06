@@ -48,7 +48,7 @@ cdef class TreeliteModel:
         self._model.reset(new Model())
 
     def __dealloc__(self):
-        self._model.release()
+        self._model.reset()
 
 cdef TreeliteModel make_model(Model* handle):
     model = TreeliteModel()
@@ -73,5 +73,23 @@ cdef list _get_frames(TreeliteModel model):
         inc(it)
     return frames
 
+cdef TreeliteModel _init_from_frames(vector[PyBufferFrame] frames):
+    model = TreeliteModel()
+    model._model.get().InitFromPyBuffer(frames)
+    return model
+
 def get_frames(model):
     return _get_frames(model)
+
+def init_from_frames(frames):
+    cdef vector[PyBufferFrame] cpp_frames
+    cdef Py_buffer* buf
+    cdef PyBufferFrame cpp_frame
+    for frame in frames:
+        buf = PyMemoryView_GET_BUFFER(<PyObject*>frame)
+        cpp_frame.buf = buf.buf
+        cpp_frame.format = buf.format
+        cpp_frame.itemsize = buf.itemsize
+        cpp_frame.nitem = buf.shape[0]
+        cpp_frames.push_back(cpp_frame)
+    return _init_from_frames(cpp_frames)
