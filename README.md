@@ -27,7 +27,7 @@ python -c 'from treelite_dask_serializer.example import main; main()'
 See `output.txt` for an example output.
 
 ## Treelite Dask serializer hook
-See the full codebase for details.
+See `example.py` for details.
 ```python
 @dask_serialize.register(TreeliteModel)
 def serialize_treelite_model(x : TreeliteModel) -> Tuple[Dict, List[memoryview]]:
