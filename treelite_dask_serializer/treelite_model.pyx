@@ -5,7 +5,7 @@
 
 from libcpp.utility cimport move
 from cython.operator cimport dereference as deref, preincrement as inc
-from typing import List
+from typing import List, Union
 
 cdef class PyBufferFrameWrapper:
     cdef PyBufferFrame _handle
@@ -82,15 +82,21 @@ cdef TreeliteModel _init_from_frames(vector[PyBufferFrame] frames):
 def get_frames(model : TreeliteModel) -> List[memoryview]:
     return _get_frames(model)
 
-def init_from_frames(frames : List[memoryview]) -> TreeliteModel:
+def init_from_frames(frames : List[Union[bytes, memoryview]], format_str: List[str], itemsize: List[int]) -> TreeliteModel:
     cdef vector[PyBufferFrame] cpp_frames
     cdef Py_buffer* buf
     cdef PyBufferFrame cpp_frame
-    for frame in frames:
-        buf = PyMemoryView_GET_BUFFER(<PyObject*>frame)
-        cpp_frame.buf = buf.buf
-        cpp_frame.format = buf.format
-        cpp_frame.itemsize = buf.itemsize
-        cpp_frame.nitem = buf.shape[0]
+    for i, frame in enumerate(frames):
+        if isinstance(frame, memoryview):
+            buf = PyMemoryView_GET_BUFFER(<PyObject*>frame)
+            cpp_frame.buf = buf.buf
+            cpp_frame.format = buf.format
+            cpp_frame.itemsize = buf.itemsize
+            cpp_frame.nitem = buf.shape[0]
+        else:
+            cpp_frame.buf = <char*>(frame)
+            cpp_frame.format = format_str[i]
+            cpp_frame.itemsize = itemsize[i]
+            cpp_frame.nitem = len(frame) // itemsize[i]
         cpp_frames.push_back(cpp_frame)
     return _init_from_frames(cpp_frames)

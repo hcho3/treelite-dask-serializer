@@ -1,4 +1,5 @@
-Built a tree stump
+#### 1. A tree stump
+### Round-trip serialization via Python buffer in-memory
 Serialized model to Python buffer frames:
   * Frame 0: dtype int32, length 1
     array([2], dtype=int32)
@@ -31,9 +32,15 @@ Serialized model to Python buffer frames:
     array([0, 0, 0, 0], dtype=uint64)
 
 Deserialized model from Python buffer frames
-Round-trip serialization (via Python buffer) preserved all bytes
+Round trip preserved all bytes
 
-Built a tree stump with leaf vector
+### Round-trip serialization via Python buffer sent over localhost TCP
+Serialized model to Python buffer frames
+Deserialized model from Python buffer frames
+Round trip preserved all bytes
+
+#### 2. A tree stump with leaf vector
+### Round-trip serialization via Python buffer in-memory
 Serialized model to Python buffer frames:
   * Frame 0: dtype int32, length 1
     array([2], dtype=int32)
@@ -66,9 +73,15 @@ Serialized model to Python buffer frames:
     array([0, 0, 0, 0], dtype=uint64)
 
 Deserialized model from Python buffer frames
-Round-trip serialization (via Python buffer) preserved all bytes
+Round trip preserved all bytes
 
-Built a tree stump with a categorical split
+### Round-trip serialization via Python buffer sent over localhost TCP
+Serialized model to Python buffer frames
+Deserialized model from Python buffer frames
+Round trip preserved all bytes
+
+#### 3. A tree stump with a categorical split
+### Round-trip serialization via Python buffer in-memory
 Serialized model to Python buffer frames:
   * Frame 0: dtype int32, length 1
     array([2], dtype=int32)
@@ -101,9 +114,15 @@ Serialized model to Python buffer frames:
     array([0, 2, 2, 2], dtype=uint64)
 
 Deserialized model from Python buffer frames
-Round-trip serialization (via Python buffer) preserved all bytes
+Round trip preserved all bytes
 
-Built 2 trees with depth 2, mix of categorical and numerical splits
+### Round-trip serialization via Python buffer sent over localhost TCP
+Serialized model to Python buffer frames
+Deserialized model from Python buffer frames
+Round trip preserved all bytes
+
+#### 4. Two trees with depth 2, mix of categorical and numerical splits
+### Round-trip serialization via Python buffer in-memory
 Serialized model to Python buffer frames:
   * Frame 0: dtype int32, length 1
     array([2], dtype=int32)
@@ -162,5 +181,10 @@ Serialized model to Python buffer frames:
     array([0, 0, 2, 3, 3, 3, 3, 3], dtype=uint64)
 
 Deserialized model from Python buffer frames
-Round-trip serialization (via Python buffer) preserved all bytes
+Round trip preserved all bytes
+
+### Round-trip serialization via Python buffer sent over localhost TCP
+Serialized model to Python buffer frames
+Deserialized model from Python buffer frames
+Round trip preserved all bytes
 

@@ -1,9 +1,29 @@
 from .serializer import serialize as treelite2bytes  # for testing purposes only
 from .builder import Node, Tree, ModelBuilder
 from .treelite_model import get_frames, init_from_frames, TreeliteModel
+
+from typing import Tuple, Dict, List, Union
+import asyncio
+from array import array
+
 import numpy as np
-from distributed.protocol import dask_serialize, dask_deserialize, serialize, deserialize
-from typing import Tuple, Dict, List
+from distributed.protocol import dask_serialize, dask_deserialize, serialize, deserialize, to_serialize
+from distributed.comm import connect, listen
+
+#### Dask serializer hook for Treelite model object
+
+@dask_serialize.register(TreeliteModel)
+def serialize_treelite_model(x : TreeliteModel) -> Tuple[Dict, List[memoryview]]:
+    frames = get_frames(x)
+    header = {'format_str': [x.format.encode('utf-8') for x in frames],
+              'itemsize': [x.itemsize for x in frames]}
+    return header, frames
+
+@dask_deserialize.register(TreeliteModel)
+def deserialize_treelite_model(header : Dict, frames: List[Union[bytes, memoryview]]):
+    return init_from_frames(frames, header['format_str'], header['itemsize'])
+
+#### Utilities for testing round-trip serialization via TCP
 
 def print_bytes(s):
     for i, e in enumerate(s):
@@ -40,27 +60,54 @@ def print_buffer_frames(frames : List[memoryview]):
             print('    ])')
     print()
 
-@dask_serialize.register(TreeliteModel)
-def serialize_treelite_model(x : TreeliteModel) -> Tuple[Dict, List[memoryview]]:
-    header = {}
-    frames = get_frames(x)
-    return header, frames
+async def get_comm_pair(listen_addr, listen_args={}, connect_args={}, **kwargs):
+    q = asyncio.Queue()
 
-@dask_deserialize.register(TreeliteModel)
-def deserialize_treelite_model(header : Dict, frames: List[memoryview]):
-    return init_from_frames(frames)
+    async def handle_comm(comm):
+        await q.put(comm)
 
-def test_round_trip(model : TreeliteModel):
+    listener = await listen(listen_addr, handle_comm, **listen_args, **kwargs)
+    comm = await connect(listener.contact_address, **connect_args, **kwargs)
+    serv_comm = await q.get()
+    return (comm, serv_comm)
+
+async def _test_round_trip_tcp(model : TreeliteModel):
+    client, server = await get_comm_pair('tcp://localhost')
+
     header, frames = serialize(model)
+    print('Serialized model to Python buffer frames')
+    msg = (header, frames)
+    await client.write(msg)
 
+    received_msg = await server.read()
+    header, frames = received_msg
+    received_model = deserialize(header, frames)
+    print(f'Deserialized model from Python buffer frames')
+
+    assert treelite2bytes(model) == treelite2bytes(received_model)
+    print('Round trip preserved all bytes\n')
+
+    await client.close()
+    await server.close()
+
+def _test_round_trip_local(model : TreeliteModel):
+    header, frames = serialize(model)
     print('Serialized model to Python buffer frames:')
     print_buffer_frames(frames)
 
-    result = deserialize(header, frames)
+    received_model = deserialize(header, frames)
     print(f'Deserialized model from Python buffer frames')
 
-    assert treelite2bytes(model) == treelite2bytes(result)
-    print('Round-trip serialization (via Python buffer) preserved all bytes\n')
+    assert treelite2bytes(model) == treelite2bytes(received_model)
+    print('Round trip preserved all bytes\n')
+
+def test_round_trip(model : TreeliteModel):
+    print('### Round-trip serialization via Python buffer in-memory')
+    _test_round_trip_local(model)
+    print('### Round-trip serialization via Python buffer sent over localhost TCP')
+    asyncio.run(_test_round_trip_tcp(model))
+
+#### Test cases
 
 def tree_stump():
     builder = ModelBuilder(num_feature=2)
@@ -74,7 +121,7 @@ def tree_stump():
     builder.append(tree)
 
     model = builder.commit()
-    print('Built a tree stump')
+    print('#### 1. A tree stump')
     test_round_trip(model)
 
 def tree_stump_leaf_vec():
@@ -89,7 +136,7 @@ def tree_stump_leaf_vec():
     builder.append(tree)
 
     model = builder.commit()
-    print('Built a tree stump with leaf vector')
+    print('#### 2. A tree stump with leaf vector')
     test_round_trip(model)
 
 def tree_stump_categorical_split():
@@ -105,7 +152,7 @@ def tree_stump_categorical_split():
     builder.append(tree)
 
     model = builder.commit()
-    print('Built a tree stump with a categorical split')
+    print('#### 3. A tree stump with a categorical split')
     test_round_trip(model)
 
 def tree_depth2():
@@ -127,7 +174,7 @@ def tree_depth2():
         builder.append(tree)
 
     model = builder.commit()
-    print('Built 2 trees with depth 2, mix of categorical and numerical splits')
+    print('#### 4. Two trees with depth 2, mix of categorical and numerical splits')
     test_round_trip(model)
 
 def main():
