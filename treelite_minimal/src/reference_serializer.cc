@@ -1,7 +1,7 @@
 /*!
  * Copyright 2020 by Contributors
- * \file serializer.cc
- * \brief Serialization of Tree and Model objects
+ * \file reference_serializer.cc
+ * \brief Reference serializer implementation
  * \author Hyunsu Cho
  */
 
@@ -37,7 +37,7 @@ struct Handler<treelite::ContiguousArray<T>> {
 
 namespace treelite {
 
-void Tree::Serialize(dmlc::Stream* fo) const {
+void Tree::ReferenceSerialize(dmlc::Stream* fo) const {
   fo->Write(num_nodes);
   fo->Write(leaf_vector_);
   fo->Write(leaf_vector_offset_);
@@ -55,26 +55,7 @@ void Tree::Serialize(dmlc::Stream* fo) const {
   CHECK_EQ(left_categories_offset_.Back(), left_categories_.Size());
 }
 
-void Tree::Deserialize(dmlc::Stream* fi) {
-  fi->Read(&num_nodes);
-  fi->Read(&leaf_vector_);
-  fi->Read(&leaf_vector_offset_);
-  fi->Read(&left_categories_);
-  fi->Read(&left_categories_offset_);
-  uint64_t sz = 0;
-  fi->Read(&sz);
-  nodes_.Resize(sz);
-  fi->Read(nodes_.Data(), sz * sizeof(Node));
-
-  // Sanity check
-  CHECK_EQ(nodes_.Size(), num_nodes);
-  CHECK_EQ(nodes_.Size() + 1, leaf_vector_offset_.Size());
-  CHECK_EQ(leaf_vector_offset_.Back(), leaf_vector_.Size());
-  CHECK_EQ(nodes_.Size() + 1, left_categories_offset_.Size());
-  CHECK_EQ(left_categories_offset_.Back(), left_categories_.Size());
-}
-
-void Model::Serialize(dmlc::Stream* fo) const {
+void Model::ReferenceSerialize(dmlc::Stream* fo) const {
   fo->Write(num_feature);
   fo->Write(num_output_group);
   fo->Write(random_forest_flag);
@@ -82,21 +63,7 @@ void Model::Serialize(dmlc::Stream* fo) const {
   uint64_t sz = static_cast<uint64_t>(trees.size());
   fo->Write(sz);
   for (const Tree& tree : trees) {
-    tree.Serialize(fo);
-  }
-}
-
-void Model::Deserialize(dmlc::Stream* fi) {
-  fi->Read(&num_feature);
-  fi->Read(&num_output_group);
-  fi->Read(&random_forest_flag);
-  fi->Read(&param, sizeof(param));
-  uint64_t sz = 0;
-  fi->Read(&sz);
-  for (uint64_t i = 0; i < sz; ++i) {
-    Tree tree;
-    tree.Deserialize(fi);
-    trees.push_back(std::move(tree));
+    tree.ReferenceSerialize(fo);
   }
 }
 

@@ -14,11 +14,6 @@ from .dmlc cimport Stream
 cdef extern from "Python.h":
     Py_buffer* PyMemoryView_GET_BUFFER(PyObject* mview)
 
-cdef extern from "treelite/tree.h" namespace "treelite::Tree":
-    cdef cppclass Node:
-        void Serialize(Stream* fo) except +
-        void Deserialize(Stream* fi) except +
-
 cdef extern from "treelite/tree.h" namespace "treelite":
     cdef cppclass PyBufferFrame:
         void* buf
@@ -27,8 +22,7 @@ cdef extern from "treelite/tree.h" namespace "treelite":
         size_t nitem
     cdef cppclass Tree:
         void Init() except +
-        void Serialize(Stream* fo) except +
-        void Deserialize(Stream* fi) except +
+        void ReferenceSerialize(Stream* fo) except +
     cdef cppclass ModelParam:
         pass
     cdef cppclass Model:
@@ -38,8 +32,7 @@ cdef extern from "treelite/tree.h" namespace "treelite":
         bool random_forest_flag
         ModelParam param
         Model() except +
-        void Serialize(Stream* fo) except +
-        void Deserialize(Stream* fi) except +
+        void ReferenceSerialize(Stream* fo) except +
         vector[PyBufferFrame] GetPyBuffer() except +
         void InitFromPyBuffer(vector[PyBufferFrame] frames) except +
 

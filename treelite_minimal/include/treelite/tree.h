@@ -461,8 +461,7 @@ class Tree {
    */
   inline void SetGain(int nid, double gain);
 
-  void Serialize(dmlc::Stream* fo) const;
-  void Deserialize(dmlc::Stream* fi);
+  void ReferenceSerialize(dmlc::Stream* fo) const;
 };
 
 struct ModelParam : public dmlc::Parameter<ModelParam> {
@@ -574,8 +573,7 @@ struct Model {
   Model(Model&&) = default;
   Model& operator=(Model&&) = default;
 
-  void Serialize(dmlc::Stream* fo) const;
-  void Deserialize(dmlc::Stream* fi);
+  void ReferenceSerialize(dmlc::Stream* fo) const;
 
   inline std::vector<PyBufferFrame> GetPyBuffer();
   inline void InitFromPyBuffer(std::vector<PyBufferFrame> frames);

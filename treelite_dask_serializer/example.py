@@ -1,4 +1,4 @@
-from .serializer import serialize as treelite2bytes  # for testing purposes only
+from .reference_serializer import treelite2bytes
 from .builder import Node, Tree, ModelBuilder
 from .treelite_model import get_frames, init_from_frames, TreeliteModel
 

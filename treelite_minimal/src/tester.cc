@@ -35,7 +35,7 @@ int main(void) {
   std::string s, s2;
   {
     std::unique_ptr<dmlc::Stream> strm(new dmlc::MemoryStringStream(&s));
-    model.Serialize(strm.get());
+    model.ReferenceSerialize(strm.get());
   }
 
   std::vector<treelite::PyBufferFrame> frames = model.GetPyBuffer();
@@ -47,7 +47,7 @@ int main(void) {
   model2.InitFromPyBuffer(frames2);
   {
     std::unique_ptr<dmlc::Stream> strm(new dmlc::MemoryStringStream(&s2));
-    model2.Serialize(strm.get());
+    model2.ReferenceSerialize(strm.get());
   }
   CHECK_EQ(s, s2);
 
