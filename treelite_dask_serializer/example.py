@@ -1,6 +1,7 @@
 from .reference_serializer import treelite2bytes
+from .serializer import get_frames, init_from_frames
 from .builder import Node, Tree, ModelBuilder
-from .treelite_model import get_frames, init_from_frames, TreeliteModel
+from .treelite_model import TreeliteModel
 
 from typing import Tuple, Dict, List, Union
 import asyncio

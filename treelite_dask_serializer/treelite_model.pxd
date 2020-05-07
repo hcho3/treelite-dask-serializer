@@ -7,12 +7,8 @@ from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp.memory cimport unique_ptr
-from cpython.object cimport PyObject
 
 from .dmlc cimport Stream
-
-cdef extern from "Python.h":
-    Py_buffer* PyMemoryView_GET_BUFFER(PyObject* mview)
 
 cdef extern from "treelite/tree.h" namespace "treelite":
     cdef cppclass PyBufferFrame:
