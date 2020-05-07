@@ -38,3 +38,60 @@ def serialize_treelite_model(x : TreeliteModel) -> Tuple[Dict, List[memoryview]]
 def deserialize_treelite_model(header : Dict, frames: List[Union[bytes, memoryview]]):
     return init_from_frames(frames, header['format_str'], header['itemsize'])
 ```
+
+## Benchmark
+Benchmark code: [`benchmark.pyx`](treelite_dask_serializer/benchmark.pyx).
+
+The benchmark consists of building a full binary decision tree with depth 24. The tree contains
+(2^24 - 1) nodes.
+
+### How to run
+```bash
+# Build the tree only; do not serialize
+python -c 'from treelite_dask_serializer.benchmark import main; main(round_trip=False)'
+
+# Build the tree and perform round trip (serialize then deserialize) in memory
+python -c 'from treelite_dask_serializer.benchmark import main; main(round_trip=True, tcp=False)'
+
+# Build the tree and perform round trip (serialize then deserialize) via TCP.
+# Use loopback interface (localhost)
+python -c 'from treelite_dask_serializer.benchmark import main; main(round_trip=True, tcp=True)'
+```
+
+### Results
+**System details**
+
+* Ubuntu 18.04 LTS
+* CPU: Intel(R) Core(TM) i7-7800X CPU @ 3.50GHz, 6 cores with hyperthreading
+* RAM: 2x 16GB DDR4 2133 MHz
+
+**Run time**
+
+In-memory:
+```
+Time to build model: 10.527289680001559 sec
+Serialized model to Python buffer frames in 2.878298982977867e-05 sec
+Deserialized model from Python buffer frames in 1.2042990420013666e-05 sec
+```
+
+TCP localhost:
+```
+Time to build model: 10.581047819985542 sec
+Serialized model to Python buffer frames in 1.6157020581886172e-05 sec
+Sent model to TCP in 2.0535116069950163 sec
+Received model to TCP in 1.8430845960101578 sec
+Deserialized model from Python buffer frames in 2.8103007934987545e-05 sec
+```
+
+Note that it is essentially free to convert between Treelite objects and Python buffer frames.
+
+**Peak memory consumption**
+Peak memory consumption is measured using `/usr/bin/time -v`. Converting between Treelite objects
+and Python buffer frames costs no memory overhead. Sending the model over TCP incurs 1.6 GB extra
+memory, probably because TCP uses send/receive buffer.
+
+| | Memory used (MB) |
+|--|--|
+|Build model only | 7265 |
+|Round trip in memory | 7265 |
+|Round trip via TCP localhost | 8903 |
