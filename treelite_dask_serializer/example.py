@@ -19,19 +19,26 @@ def print_bytes(s):
     if len(s) % 48 != 0:
         print()
 
-def print_byte_ndarray(x):	
-    for i, e in enumerate(x):	
-        if (i + 1) % 48 == 1:	
-            print('    ', end='')	
-        print(f'{e:02X}', end='')	
-        if (i + 1) % 48 == 0:	
-            print()	
-        elif (i + 1) % 16 == 0:	
-            print('  ', end='')	
-        else:	
-            print(' ', end='')	
-    if len(x) % 48 != 0:	
-        print()
+def print_buffer_frames(frames : List[memoryview]):
+    for frame_id, frame in enumerate(frames):
+        _frame = np.asarray(frame)
+        if getattr(_frame.dtype, 'names', None) is None:
+            print(f'  * Frame {frame_id}: dtype {_frame.dtype}, length {len(_frame)}')
+            print(f'    {repr(_frame)}')
+        else:
+            if len(_frame.dtype.names) == 14:  # Node type
+                print(f'  * Frame {frame_id}: dtype Node, length {len(_frame)}')
+                print('    (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, ' +
+                      'split_type_, cmp_, missing_category_to_zero_, data_count_present_, \n     ' +
+                      'sum_hess_present_, gain_present_, pad_)')
+            else:  # ModelParam type
+                print(f'  * Frame {frame_id}: dtype ModelParam, length {len(_frame)}')
+                print('    (pred_transform, sigmoid_alpha, global_bias)')
+            print('    array([')
+            for e in _frame:
+                print(f'        {e}')
+            print('    ])')
+    print()
 
 @dask_serialize.register(TreeliteModel)
 def serialize_treelite_model(x : TreeliteModel) -> Tuple[Dict, List[memoryview]]:
@@ -47,28 +54,7 @@ def test_round_trip(model : TreeliteModel):
     header, frames = serialize(model)
 
     print('Serialized model to Python buffer frames:')
-    for frame_id, frame in enumerate(frames):
-        _frame = np.asarray(frame)
-        if getattr(_frame.dtype, 'names', None) is None:
-            print(f'  * Frame {frame_id}: dtype {_frame.dtype}, length {len(_frame)}')
-            if _frame.dtype == np.uint8:
-                print_byte_ndarray(_frame)
-            else:
-                print(f'    {repr(_frame)}')
-        else:
-            if len(_frame.dtype.names) == 14:  # Node type
-                print(f'  * Frame {frame_id}: dtype Node, length {len(_frame)}')
-                print('    (cleft_, cright_, sindex_, info_, data_count_, sum_hess_, gain_, ' +
-                      'split_type_, cmp_, missing_category_to_zero_, data_count_present_, \n     ' +
-                      'sum_hess_present_, gain_present_, pad_)')
-            else:  # ModelParam type
-                print(f'  * Frame {frame_id}: dtype ModelParam, length {len(_frame)}')
-                print('    (pred_transform, sigmoid_alpha, global_bias)')
-            print('    array([')
-            for e in _frame:
-                print(f'        {e}')
-            print('    ])')
-    print()
+    print_buffer_frames(frames)
 
     result = deserialize(header, frames)
     print(f'Deserialized model from Python buffer frames')

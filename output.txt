@@ -5,7 +5,7 @@ Serialized model to Python buffer frames:
   * Frame 1: dtype int32, length 1
     array([1], dtype=int32)
   * Frame 2: dtype uint8, length 1
-    00 
+    array([0], dtype=uint8)
   * Frame 3: dtype ModelParam, length 1
     (pred_transform, sigmoid_alpha, global_bias)
     array([
@@ -40,7 +40,7 @@ Serialized model to Python buffer frames:
   * Frame 1: dtype int32, length 1
     array([2], dtype=int32)
   * Frame 2: dtype uint8, length 1
-    01 
+    array([1], dtype=uint8)
   * Frame 3: dtype ModelParam, length 1
     (pred_transform, sigmoid_alpha, global_bias)
     array([
@@ -75,7 +75,7 @@ Serialized model to Python buffer frames:
   * Frame 1: dtype int32, length 1
     array([1], dtype=int32)
   * Frame 2: dtype uint8, length 1
-    00 
+    array([0], dtype=uint8)
   * Frame 3: dtype ModelParam, length 1
     (pred_transform, sigmoid_alpha, global_bias)
     array([
@@ -110,7 +110,7 @@ Serialized model to Python buffer frames:
   * Frame 1: dtype int32, length 1
     array([1], dtype=int32)
   * Frame 2: dtype uint8, length 1
-    00 
+    array([0], dtype=uint8)
   * Frame 3: dtype ModelParam, length 1
     (pred_transform, sigmoid_alpha, global_bias)
     array([
