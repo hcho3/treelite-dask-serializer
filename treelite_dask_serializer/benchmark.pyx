@@ -9,7 +9,12 @@ from .treelite_frontend cimport TreeBuilder, ModelBuilder
 from .treelite_model cimport make_model, TreeliteModel, Model as NativeModel
 from libcpp.memory cimport unique_ptr
 from typing import Tuple, Dict, List, Union
+
 import time
+import os
+import tempfile
+import struct
+import pickle
 import asyncio
 
 from distributed.comm import connect, listen
@@ -103,7 +108,43 @@ async def _round_trip_tcp(model : TreeliteModel):
     await client.close()
     await server.close()
 
-def main(round_trip=True, tcp=False):
+def _round_trip_file(model : TreeliteModel):
+    with tempfile.TemporaryDirectory() as tempdir:
+        tstart = time.perf_counter()
+        header, frames = serialize(model)
+        print(f'Serialized model to Python buffer frames in {time.perf_counter() - tstart} sec')
+
+        tstart = time.perf_counter()
+        msg = {'header': header, 'frames': frames}
+        with open(os.path.join(tempdir, 'model.bin'), 'wb') as f:
+            h = pickle.dumps(header)
+            f.write(struct.pack('=Q', len(h)))
+            f.write(h)
+            f.write(struct.pack('=Q', len(frames)))
+            for frame in frames:
+                b = bytes(frame)
+                f.write(struct.pack('=Q', len(b)))
+                f.write(b)
+        print(f'Wrote model to disk in {time.perf_counter() - tstart} sec')
+
+        tstart = time.perf_counter()
+        frames = []
+        with open(os.path.join(tempdir, 'model.bin'), 'rb') as f:
+            h_sz = struct.unpack('=Q', f.read(8))[0]
+            h = f.read(h_sz)
+            header = pickle.loads(h)
+            nframe = struct.unpack('=Q', f.read(8))[0]
+            for frame_id in range(nframe):
+                frame_sz = struct.unpack('=Q', f.read(8))[0]
+                frame = f.read(frame_sz)
+                frames.append(frame)
+        print(f'Read model from disk in {time.perf_counter() - tstart} sec')
+
+        tstart = time.perf_counter()
+        received_model = deserialize(header, frames)
+        print(f'Deserialized model from Python buffer frames in {time.perf_counter() - tstart} sec')
+
+def main(round_trip=True, tcp=False, disk=False):
     ### Build full binary decision tree with depth 24
     ### Call C++ API directly for speed
     model = build_full_tree(num_feature=3, depth=24)
@@ -111,5 +152,7 @@ def main(round_trip=True, tcp=False):
     if round_trip:
         if tcp:
             asyncio.run(_round_trip_tcp(model))
+        elif disk:
+            _round_trip_file(model)
         else:
             _round_trip_local(model)

@@ -51,7 +51,10 @@ The benchmark consists of building a full binary decision tree with depth 24. Th
 python -c 'from treelite_dask_serializer.benchmark import main; main(round_trip=False)'
 
 # Build the tree and perform round trip (serialize then deserialize) in memory
-python -c 'from treelite_dask_serializer.benchmark import main; main(round_trip=True, tcp=False)'
+python -c 'from treelite_dask_serializer.benchmark import main; main(round_trip=True)'
+
+# Build the tree and perform round trip (serialize then deserialize) via a temp file
+python -c 'from treelite_dask_serializer.benchmark import main; main(round_trip=True, disk=True)'
 
 # Build the tree and perform round trip (serialize then deserialize) via TCP.
 # Use loopback interface (localhost)
@@ -69,18 +72,27 @@ python -c 'from treelite_dask_serializer.benchmark import main; main(round_trip=
 
 In-memory:
 ```
-Time to build model: 10.527289680001559 sec
-Serialized model to Python buffer frames in 2.878298982977867e-05 sec
-Deserialized model from Python buffer frames in 1.2042990420013666e-05 sec
+Time to build model: 10.36706407397287 sec
+Serialized model to Python buffer frames in 2.8313021175563335e-05 sec
+Deserialized model from Python buffer frames in 1.0696996469050646e-05 sec
+```
+
+Tempfile:
+```
+Time to build model: 10.452910444000736 sec
+Serialized model to Python buffer frames in 1.791398972272873e-05 sec
+Wrote model to disk in 1.1778236500103958 sec
+Read model from disk in 0.30505522998282686 sec
+Deserialized model from Python buffer frames in 2.108400803990662e-05 sec
 ```
 
 TCP localhost:
 ```
-Time to build model: 10.581047819985542 sec
-Serialized model to Python buffer frames in 1.6157020581886172e-05 sec
-Sent model to TCP in 2.0535116069950163 sec
-Received model to TCP in 1.8430845960101578 sec
-Deserialized model from Python buffer frames in 2.8103007934987545e-05 sec
+Time to build model: 10.472975024982588 sec
+Serialized model to Python buffer frames in 1.3948010746389627e-05 sec
+Sent model to TCP in 2.072100571007468 sec
+Received model to TCP in 1.842639731010422 sec
+Deserialized model from Python buffer frames in 2.9660004656761885e-05 sec
 ```
 
 Note that it is essentially free to convert between Treelite objects and Python buffer frames.
@@ -90,8 +102,9 @@ Peak memory consumption is measured using `/usr/bin/time -v`. Converting between
 and Python buffer frames costs no memory overhead. Sending the model over TCP incurs 1.6 GB extra
 memory, probably because TCP uses send/receive buffer.
 
-| | Memory used (MB) |
+| | Memory used, rounded up to next MB |
 |--|--|
-|Build model only | 7265 |
-|Round trip in memory | 7265 |
-|Round trip via TCP localhost | 8903 |
+|Build model only | 7265 MB |
+|Round trip in memory | 7265 MB |
+|Round trip via file | 7265 MB |
+|Round trip via TCP localhost | 8903 MB |
