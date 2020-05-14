@@ -4,10 +4,11 @@
 # cython: language_level = 3
 
 from libcpp cimport bool
-from .treelite_model cimport Model as NativeModel
-from .treelite_model cimport TreeliteModel, make_model
-from .treelite_frontend cimport TreeBuilder as NativeTreeBuilder
-from .treelite_frontend cimport ModelBuilder as NativeModelBuilder
+from .treelite_model cimport TreeliteModel, make_model, TreeBuilderHandle, \
+                             ModelBuilderHandle, ModelHandle, HandleError
+from .treelite_frontend cimport *
+
+import numpy as np
 
 class TreeliteError(Exception):
     pass
@@ -31,9 +32,10 @@ cdef class Node:
         if self._tree is None or self._node_key == -1:
             raise TreeliteError('This node has never been inserted into a tree; a node must ' +
                     'be inserted before it can be a root')
-        self._tree._handle.SetRootNode(self._node_key)
+        HandleError(TreeliteTreeBuilderSetRootNode(self._tree._handle, self._node_key))
 
     def set_leaf_node(self, leaf_value):
+        cdef float[::1] data
         if not self.empty:
             node_key = self._node_key if self._node_key != -1 else '_'
             raise TreeliteError('Cannot modify a non-empty node. If you meant to change type ' +
@@ -61,9 +63,12 @@ cdef class Node:
                     'be inserted before it can be a leaf node')
 
         if is_list:
-            self._tree._handle.SetLeafVectorNode(self._node_key, leaf_value)
+            data = np.array(leaf_value, dtype=np.float32)
+            HandleError(TreeliteTreeBuilderSetLeafVectorNode(self._tree._handle, self._node_key,
+                &data[0], len(leaf_value)))
         else:
-            self._tree._handle.SetLeafNode(self._node_key, leaf_value)
+            HandleError(TreeliteTreeBuilderSetLeafNode(self._tree._handle, self._node_key,
+                leaf_value))
 
         self.node_type = 'leaf'
 
@@ -84,13 +89,15 @@ cdef class Node:
             self._tree[left_child_key] = Node()
         if right_child_key not in self._tree:
             self._tree[right_child_key] = Node()
-        self._tree._handle.SetNumericalTestNode(self._node_key, feature_id, opname.encode('utf-8'),
-                threshold, (1 if default_left else 0), left_child_key, right_child_key)
+        HandleError(TreeliteTreeBuilderSetNumericalTestNode(self._tree._handle, self._node_key,
+            feature_id, opname.encode('utf-8'), threshold, (1 if default_left else 0),
+            left_child_key, right_child_key))
         self.empty = False
         self.node_type = 'numerical test'
 
     def set_categorical_test_node(self, feature_id, left_categories, default_left,
             left_child_key, right_child_key):
+        cdef unsigned int[::1] data
         if not self.empty:
             node_key = self._node_key if self._node_key != -1 else '_'
             raise ValueError('Cannot modify a non-empty node. If you meant to change type of ' +
@@ -106,22 +113,24 @@ cdef class Node:
             self._tree[left_child_key] = Node()
         if right_child_key not in self._tree:
             self._tree[right_child_key] = Node()
-        self._tree._handle.SetCategoricalTestNode(self._node_key, feature_id, left_categories,
-                (1 if default_left else 0), left_child_key, right_child_key)
+        data = np.array(left_categories, dtype=np.uint32)
+        HandleError(TreeliteTreeBuilderSetCategoricalTestNode(self._tree._handle, self._node_key,
+            feature_id, &data[0], len(left_categories), (1 if default_left else 0), left_child_key,
+            right_child_key))
         self.empty = False
         self.node_type = 'categorical test'
 
 cdef class Tree:
-    cdef NativeTreeBuilder* _handle
-    cdef NativeModelBuilder* _model
+    cdef TreeBuilderHandle _handle
+    cdef ModelBuilderHandle _model
     cdef dict nodes
 
     def __cinit__(self):
-        self._handle = new NativeTreeBuilder()
+        HandleError(TreeliteCreateTreeBuilder(&self._handle))
 
     def __dealloc__(self):
         if self._handle != NULL and self._model == NULL:
-            del self._handle
+            HandleError(TreeliteDeleteTreeBuilder(self._handle))
 
     def __init__(self):
         self.nodes = {}
@@ -152,7 +161,7 @@ cdef class Tree:
                     f'node {key}, delete it first and then add an empty node with the same key.')
         if not value.empty:
             raise ValueError('Can only insert an empty node')
-        self._handle.CreateNode(key)
+        HandleError(TreeliteTreeBuilderCreateNode(self._handle, key))
         self.nodes.__setitem__(key, value)
 
         # In the node, save backlinks to the tree
@@ -160,7 +169,7 @@ cdef class Tree:
         value._tree = self
 
     def __delitem__(self, key):
-        self._handle.DeleteNode(key)
+        HandleError(TreeliteTreeBuilderDeleteNode(self._handle, key))
         self.nodes.__delitem__(key)
 
     def __iter__(self):
@@ -171,7 +180,7 @@ cdef class Tree:
                 dict(self).__repr__())
 
 cdef class ModelBuilder:
-    cdef NativeModelBuilder* _handle
+    cdef ModelBuilderHandle _handle
     cdef list trees
 
     def __cinit__(self):
@@ -179,7 +188,7 @@ cdef class ModelBuilder:
 
     def __dealloc__(self):
         if self._handle != NULL:
-            del self._handle
+            HandleError(TreeliteDeleteModelBuilder(self._handle))
 
     def __init__(self, num_feature, num_output_group=1, random_forest=False, **kwargs):
         if not isinstance(num_feature, int):
@@ -190,11 +199,13 @@ cdef class ModelBuilder:
             raise ValueError('num_output_group must be of int type')
         if num_output_group <= 0:
             raise ValueError('num_output_group must be strictly positive')
-        self._handle = new NativeModelBuilder(num_feature, num_output_group, random_forest)
+        HandleError(TreeliteCreateModelBuilder(num_feature, num_output_group, random_forest,
+            &self._handle))
         for key, value in kwargs.items():
             if not isinstance(value, (str,)):
                 value = str(value)
-            self._handle.SetModelParam(key.encode('utf-8'), value.encode('utf-8'))
+            HandleError(TreeliteModelBuilderSetModelParam(self._handle, key.encode('utf-8'),
+                value.encode('utf-8')))
         self.trees = []
 
     def insert(self, index, Tree tree):
@@ -202,10 +213,10 @@ cdef class ModelBuilder:
             raise ValueError('index must be of int type')
         if index < 0 or index > len(self):
             raise ValueError('index out of bounds')
-        assert self._handle.InsertTree(tree._handle, index) == index
+        HandleError(TreeliteModelBuilderInsertTree(self._handle, tree._handle, index))
 
-        del tree._handle
-        tree._handle = self._handle.GetTree(index)
+        HandleError(TreeliteDeleteTreeBuilder(tree._handle))
+        HandleError(TreeliteModelBuilderGetTree(self._handle, index, &tree._handle))
         tree._model = self._handle
         self.trees.insert(index, tree)
 
@@ -213,8 +224,8 @@ cdef class ModelBuilder:
         self.insert(len(self), tree)
 
     def commit(self):
-        handle = new NativeModel()
-        self._handle.CommitModel(handle)
+        cdef ModelHandle handle
+        HandleError(TreeliteModelBuilderCommitModel(self._handle, &handle))
         return make_model(handle)
 
     ### Implement list semantics whenever applicable
@@ -225,7 +236,7 @@ cdef class ModelBuilder:
         return self.trees.__getitem__(index)
 
     def __delitem__(self, index):
-        self._handle.DeleteTree(index)
+        HandleError(TreeliteModelBuilderDeleteTree(self._handle, index))
         self.trees.__delitem__(index)
 
     def __iter__(self):

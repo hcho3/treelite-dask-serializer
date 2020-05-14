@@ -7,14 +7,19 @@
 from libcpp.string cimport string
 from libcpp.memory cimport unique_ptr
 
-from .treelite_model cimport TreeliteModel, make_model, make_stump
+from .treelite_model cimport TreeliteModel
 from .dmlc cimport Stream, MemoryStringStream
+
+cdef extern from "treelite/tree.h" namespace "treelite":
+    cdef cppclass Model:
+        void ReferenceSerialize(Stream* fo) except +
 
 cdef string _reference_serialize(TreeliteModel model) except *:
     cdef string s
     cdef unique_ptr[Stream] strm
     strm.reset(new MemoryStringStream(&s))
-    model._model.get().ReferenceSerialize(strm.get())
+    cdef Model* ptr = <Model*>model._model
+    ptr.ReferenceSerialize(strm.get())
     strm.reset()
     return s
 

@@ -16,7 +16,9 @@ endif()
 add_subdirectory(3rdparty/dmlc-core)
 
 set(SOURCES src/builder.cc src/model.cc src/optable.cc src/reference_serializer.cc
-            include/treelite/base.h include/treelite/frontend.h include/treelite/tree.h)
+            src/c_api/c_api_error.h src/c_api/c_api.cc src/c_api/c_api_error.cc
+            include/treelite/base.h include/treelite/frontend.h include/treelite/tree.h
+            include/treelite/c_api.h include/treelite/c_api_common.h)
 
 add_library(treelite STATIC ${SOURCES})
 

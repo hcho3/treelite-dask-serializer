@@ -7,8 +7,13 @@ from typing import List, Union
 from libcpp.vector cimport vector
 from cython.operator cimport dereference as deref, preincrement as inc
 from cpython.object cimport PyObject
-from .treelite_model cimport TreeliteModel
-from .treelite_model cimport PyBufferFrame
+from .treelite_model cimport TreeliteModel, ModelHandle
+from .treelite_model cimport PyBufferFrame, make_model
+
+cdef extern from "treelite/tree.h" namespace "treelite":
+    cdef cppclass Model:
+        vector[PyBufferFrame] GetPyBuffer() except +
+        void InitFromPyBuffer(vector[PyBufferFrame] frames) except +
 
 cdef extern from "Python.h":
     Py_buffer* PyMemoryView_GET_BUFFER(PyObject* mview)
@@ -52,7 +57,8 @@ cdef PyBufferFrameWrapper MakePyBufferFrameWrapper(PyBufferFrame handle):
 
 cdef list _get_frames(TreeliteModel model):
     frames = []
-    cdef vector[PyBufferFrame] interface = model._model.get().GetPyBuffer()
+    cdef Model* model_obj = <Model*> model._model
+    cdef vector[PyBufferFrame] interface = model_obj.GetPyBuffer()
     cdef vector[PyBufferFrame].iterator it = interface.begin()
     while it != interface.end():
         v = deref(it)
@@ -62,9 +68,10 @@ cdef list _get_frames(TreeliteModel model):
     return frames
 
 cdef TreeliteModel _init_from_frames(vector[PyBufferFrame] frames):
-    model = TreeliteModel()
-    model._model.get().InitFromPyBuffer(frames)
-    return model
+    cdef Model* model_obj = new Model()
+    model_obj.InitFromPyBuffer(frames)
+    cdef ModelHandle handle = <ModelHandle>model_obj
+    return make_model(handle)
 
 def get_frames(model : TreeliteModel) -> List[memoryview]:
     return _get_frames(model)

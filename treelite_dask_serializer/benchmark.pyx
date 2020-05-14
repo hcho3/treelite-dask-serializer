@@ -5,8 +5,8 @@
 
 from .builder import Node, Tree, ModelBuilder
 from .serializer import get_frames, init_from_frames
-from .treelite_frontend cimport TreeBuilder, ModelBuilder
-from .treelite_model cimport make_model, TreeliteModel, Model as NativeModel
+from .treelite_frontend cimport *
+from .treelite_model cimport *
 from libcpp.memory cimport unique_ptr
 from typing import Tuple, Dict, List, Union
 
@@ -31,35 +31,34 @@ def deserialize(header : Dict, frames: List[Union[bytes, memoryview]]) -> Treeli
 def build_full_tree(num_feature : int, depth : int) -> TreeliteModel:
     tstart = time.perf_counter()
 
-    cdef unique_ptr[ModelBuilder] builder
-    cdef unique_ptr[TreeBuilder] tree
-    builder.reset(new ModelBuilder(num_feature, 1, False))
-    tree.reset(new TreeBuilder())
+    cdef ModelBuilderHandle builder
+    cdef TreeBuilderHandle tree
+    TreeliteCreateModelBuilder(num_feature, 1, False, &builder)
+    TreeliteCreateTreeBuilder(&tree)
 
     cdef int nid, left_child_key, right_child_key
     cdef int level, i
     for level in range(depth + 1):
         for i in range(2**level):
             nid = 2**level - 1 + i
-            tree.get().CreateNode(nid)
+            TreeliteTreeBuilderCreateNode(tree, nid)
 
     for level in range(depth + 1):
         for i in range(2**level):
             nid = 2**level - 1 + i
             if level == depth:
-                tree.get().SetLeafNode(nid, 0.5)
+                TreeliteTreeBuilderSetLeafNode(tree, nid, 0.5)
             else:
                 left_child_key = 2 * nid + 1
                 right_child_key = 2 * nid + 2
-                tree.get().SetNumericalTestNode(nid, level % 2, '<', 0.0, True,
-                                                left_child_key, right_child_key)
-    tree.get().SetRootNode(0)
-    builder.get().InsertTree(tree.get(), -1)
+                TreeliteTreeBuilderSetNumericalTestNode(tree, nid, level % 2, '<', 0.0, True,
+                                                        left_child_key, right_child_key)
+    TreeliteTreeBuilderSetRootNode(tree, 0)
+    TreeliteModelBuilderInsertTree(builder, tree, -1)
 
-    cdef unique_ptr[NativeModel] model_handle
-    model_handle.reset(new NativeModel())
-    builder.get().CommitModel(model_handle.get())
-    model = make_model(model_handle.release())
+    cdef ModelHandle model_handle
+    TreeliteModelBuilderCommitModel(builder, &model_handle)
+    model = make_model(model_handle)
     print(f'Time to build model: {time.perf_counter() - tstart} sec')
 
     return model
